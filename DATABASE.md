@@ -1,117 +1,147 @@
 # Spark Hackathon Hub — Database Documentation
 
-**Database:** PostgreSQL
-**ORM:** Drizzle ORM
-**Schema Location:** `src/lib/db/schema/`
-**Migrations:** `drizzle/`
+## Introduction
+
+This document describes the complete database schema for the Spark Hackathon Hub platform. The platform uses **PostgreSQL** as its relational database and **Drizzle ORM** as the TypeScript query layer. All schema definitions live in `src/lib/db/schema/` as TypeScript files, and migrations are generated into the `drizzle/` folder.
+
+The database consists of **19 tables** and **10 custom enum types** that together support the full hackathon lifecycle: user management, organization onboarding, competition creation, team formation, project submission, automated validation, AI-powered evaluation, human judging, ranking, and winner announcement.
+
+If you're a new developer joining the project, this document will help you understand what each table stores, how tables relate to each other, and the typical queries used throughout the application.
+
+### How to Run Migrations
+
+```bash
+# Generate a new migration after changing schema files
+npx drizzle-kit generate
+
+# Push schema directly to database (development)
+npx drizzle-kit push
+
+# Open Drizzle Studio to browse data visually
+npx drizzle-kit studio
+```
+
+### How Tables Connect to the Application
+
+Each table has a corresponding TypeScript schema file in `src/lib/db/schema/`. For example, the `users` table is defined in `users.ts`, and the `competitions` table is defined in `competitions.ts`. All schemas are re-exported from `src/lib/db/schema/index.ts`. The Drizzle client at `src/lib/db/index.ts` connects to PostgreSQL using the `DATABASE_URL` environment variable.
 
 ---
 
 ## Table of Contents
 
-1. [Enums (Custom Types)](#enums)
-2. [users](#users)
-3. [organizations](#organizations)
-4. [competitions](#competitions)
-5. [competition_prizes](#competition_prizes)
-6. [competition_sponsors](#competition_sponsors)
-7. [teams](#teams)
-8. [team_members](#team_members)
-9. [submissions](#submissions)
-10. [submission_validations](#submission_validations)
-11. [ai_evaluations](#ai_evaluations)
-12. [judge_assignments](#judge_assignments)
-13. [judge_invitations](#judge_invitations)
-14. [judge_evaluations](#judge_evaluations)
-15. [final_rankings](#final_rankings)
-16. [notifications](#notifications)
-17. [payments](#payments)
-18. [audit_logs](#audit_logs)
-19. [platform_settings](#platform_settings)
-20. [Entity Relationship Diagram](#entity-relationship-diagram)
-21. [Common Queries](#common-queries)
+1. [Custom Enum Types](#1-custom-enum-types)
+2. [users](#2-users)
+3. [organizations](#3-organizations)
+4. [competitions](#4-competitions)
+5. [competition_prizes](#5-competition_prizes)
+6. [competition_sponsors](#6-competition_sponsors)
+7. [teams](#7-teams)
+8. [team_members](#8-team_members)
+9. [submissions](#9-submissions)
+10. [submission_validations](#10-submission_validations)
+11. [ai_evaluations](#11-ai_evaluations)
+12. [judge_assignments](#12-judge_assignments)
+13. [judge_invitations](#13-judge_invitations)
+14. [judge_evaluations](#14-judge_evaluations)
+15. [final_rankings](#15-final_rankings)
+16. [notifications](#16-notifications)
+17. [payments](#17-payments)
+18. [audit_logs](#18-audit_logs)
+19. [platform_settings](#19-platform_settings)
+20. [Entity Relationship Diagram](#20-entity-relationship-diagram)
+21. [Common Queries](#21-common-queries)
 
 ---
 
-## Enums
+## 1. Custom Enum Types
+
+PostgreSQL enums enforce that columns can only contain predefined values. The platform uses 10 enums to ensure data integrity across roles, statuses, and categories. These are defined in `src/lib/db/schema/enums.ts`.
+
+**User roles** — every user on the platform has exactly one role. Students participate in hackathons, sponsors (organizers) host them, judges evaluate submissions, and admins manage the platform.
 
 ```sql
 CREATE TYPE "user_role" AS ENUM('student', 'sponsor', 'judge', 'admin');
+```
 
+**Competition status** — tracks a competition through its lifecycle. A competition starts as a draft, goes through admin review, gets approved, goes live, enters judging, and finally completes. It can be cancelled at any stage.
+
+```sql
 CREATE TYPE "hackathon_status" AS ENUM(
   'draft', 'pending_review', 'approved', 'active', 'judging', 'completed', 'cancelled'
 );
+```
 
+**Submission status** — tracks a project submission through validation, AI evaluation, human judging, and finalist/winner selection.
+
+```sql
 CREATE TYPE "submission_status" AS ENUM(
   'submitted', 'validating', 'valid', 'invalid', 'flagged',
   'ai_evaluated', 'judged', 'finalist', 'winner'
 );
+```
 
+**Other enums** — team roles distinguish the team lead from members. Organization verification tracks admin approval. Payment status tracks Stripe transactions. Notification types categorize alerts. Validation enums track what checks were run and whether they passed.
+
+```sql
 CREATE TYPE "team_role" AS ENUM('lead', 'member');
-
 CREATE TYPE "org_verification" AS ENUM('pending', 'verified', 'rejected');
-
 CREATE TYPE "payment_status" AS ENUM('pending', 'completed', 'failed', 'refunded');
-
+CREATE TYPE "competition_visibility" AS ENUM('public', 'private');
+CREATE TYPE "contribution_type" AS ENUM(
+  'monetary', 'tech_credits', 'mentorship', 'internships',
+  'prizes_inkind', 'cloud_services', 'api_credits', 'other'
+);
+CREATE TYPE "sponsor_tier" AS ENUM('title', 'gold', 'silver', 'bronze', 'partner');
 CREATE TYPE "notification_type" AS ENUM(
   'competition_approved', 'competition_rejected', 'team_invite', 'team_joined',
   'submission_valid', 'submission_invalid', 'submission_flagged',
   'ai_evaluation_complete', 'judge_assigned', 'judge_evaluation_complete',
   'finalist_selected', 'winner_announced', 'payment_received', 'general'
 );
-
 CREATE TYPE "validation_check" AS ENUM('required_fields', 'github_repo', 'video_link', 'deadline');
-
 CREATE TYPE "validation_result" AS ENUM('pass', 'fail', 'warning');
-
-CREATE TYPE "competition_visibility" AS ENUM('public', 'private');
-
-CREATE TYPE "contribution_type" AS ENUM(
-  'monetary', 'tech_credits', 'mentorship', 'internships',
-  'prizes_inkind', 'cloud_services', 'api_credits', 'other'
-);
-
-CREATE TYPE "sponsor_tier" AS ENUM('title', 'gold', 'silver', 'bronze', 'partner');
 ```
 
 ---
 
-## users
+## 2. users
 
-Stores all platform users — students, sponsors (organizers), judges, and admins.
+The `users` table is the central table of the platform. Every person who signs in — whether a student, organizer, judge, or admin — has a row here. The table stores both authentication data (linked to Clerk via `clerk_id`) and profile information.
+
+Students have additional fields like `university`, `year_of_study`, `whatsapp`, and `skills`. These are nullable because organizers and judges don't need them. The `onboarding_complete` flag determines whether the user has finished setting up their profile — the middleware checks this on every request and redirects incomplete users to the onboarding page.
 
 **Schema file:** `src/lib/db/schema/users.ts`
 
 ```sql
 CREATE TABLE "users" (
   "id"                   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  "clerk_id"             text NOT NULL UNIQUE,        -- Clerk authentication ID
+  "clerk_id"             text NOT NULL UNIQUE,
   "email"                text NOT NULL UNIQUE,
   "first_name"           text,
   "last_name"            text,
-  "image_url"            text,                        -- Profile picture from Google
-  "role"                 user_role,                    -- student | sponsor | judge | admin
+  "image_url"            text,
+  "role"                 user_role,
   "onboarding_complete"  boolean DEFAULT false NOT NULL,
-  "university"           text,                        -- Student field
-  "year_of_study"        text,                        -- Student field (1st Year, 2nd Year, etc.)
-  "whatsapp"             text,                        -- Student field
-  "skills"               jsonb,                       -- Student field: ["React", "Python", ...]
+  "university"           text,
+  "year_of_study"        text,
+  "whatsapp"             text,
+  "skills"               jsonb,
   "bio"                  text,
   "github_url"           text,
   "linkedin_url"         text,
-  "achievements"         jsonb DEFAULT '[]',           -- ["first_submission", "first_win", ...]
+  "achievements"         jsonb DEFAULT '[]',
   "created_at"           timestamp DEFAULT now() NOT NULL,
   "updated_at"           timestamp DEFAULT now() NOT NULL
 );
 ```
 
-**Foreign keys referencing this table:** organizations, competitions, teams, team_members, submissions, judge_assignments, judge_evaluations, notifications, audit_logs
+This table is referenced by almost every other table in the database. Deleting a user cascades to their organizations, teams, notifications, and assignments.
 
 ---
 
-## organizations
+## 3. organizations
 
-Sponsor/organizer organizations that host competitions.
+When a user signs up as an organizer (sponsor), they create an organization. This table stores the company details. Each organization belongs to one user (the `owner_id`). The `verification` field tracks whether an admin has approved the organization — new organizations start as `pending`.
 
 **Schema file:** `src/lib/db/schema/organizations.ts`
 
@@ -120,26 +150,30 @@ CREATE TABLE "organizations" (
   "id"                   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "owner_id"             uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   "name"                 text NOT NULL,
-  "slug"                 text NOT NULL UNIQUE,         -- URL-friendly name
+  "slug"                 text NOT NULL UNIQUE,
   "website"              text,
   "description"          text,
   "logo_url"             text,
-  "industry"             text,                        -- e.g. "FinTech", "EdTech"
+  "industry"             text,
   "contact_email"        text,
   "contact_phone"        text,
-  "contact_person_name"  text,                        -- Primary contact name
+  "contact_person_name"  text,
   "verification"         org_verification DEFAULT 'pending' NOT NULL,
-  "rejection_reason"     text,                        -- Admin's reason for rejection
+  "rejection_reason"     text,
   "created_at"           timestamp DEFAULT now() NOT NULL,
   "updated_at"           timestamp DEFAULT now() NOT NULL
 );
 ```
 
+The `slug` is a URL-friendly version of the organization name, generated automatically during onboarding. The `rejection_reason` is set by admins when they reject an organization, giving the organizer actionable feedback.
+
 ---
 
-## competitions
+## 4. competitions
 
-Hackathon/competition definitions with all configuration.
+This is the largest and most important table. It stores everything about a hackathon — from basic info (title, description) to participation rules, timeline dates, prize structure, judging criteria, and submission requirements. Many columns use JSONB to store flexible, structured data like arrays of prizes, judging criteria, tags, and resources.
+
+The `status` column tracks the competition through its lifecycle: `draft` → `pending_review` → `approved` → `active` → `judging` → `completed`. The `visibility` column determines whether it appears on the public marketplace (`public`) or is only accessible via access code (`private`).
 
 **Schema file:** `src/lib/db/schema/competitions.ts`
 
@@ -148,31 +182,23 @@ CREATE TABLE "competitions" (
   "id"                       uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "organization_id"          uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   "created_by"               uuid NOT NULL REFERENCES users(id),
-
-  -- Basic Info
   "title"                    text NOT NULL,
   "slug"                     text NOT NULL UNIQUE,
   "tagline"                  text,
   "description"              text NOT NULL,
-  "category"                 text,                    -- "AI/ML", "Web Dev", etc.
-  "tags"                     jsonb DEFAULT '[]',       -- ["Beginner Friendly", "Cash Prizes", ...]
+  "category"                 text,
+  "tags"                     jsonb DEFAULT '[]',
   "cover_image_url"          text,
   "logo_url"                 text,
-
-  -- Challenge Details
   "challenge_statement"      text,
   "requirements"             text,
-  "resources"                jsonb DEFAULT '[]',       -- [{title, url}, ...]
-
-  -- Participation Rules
+  "resources"                jsonb DEFAULT '[]',
   "max_team_size"            integer DEFAULT 4 NOT NULL,
   "min_team_size"            integer DEFAULT 1 NOT NULL,
   "max_participants"         integer,
   "allow_solo_participation" boolean DEFAULT true NOT NULL,
   "eligibility_criteria"     text,
-  "target_participants"      jsonb DEFAULT '["all"]',  -- ["university_students", "developers", ...]
-
-  -- Timeline
+  "target_participants"      jsonb DEFAULT '["all"]',
   "registration_start"       timestamp,
   "registration_end"         timestamp,
   "submission_start"         timestamp,
@@ -180,43 +206,39 @@ CREATE TABLE "competitions" (
   "judging_start"            timestamp,
   "judging_end"              timestamp,
   "results_date"             timestamp,
-
-  -- Prizes (stored as JSONB for flexibility)
-  "prizes"                   jsonb DEFAULT '[]',       -- [{position, title, amount, currency, description}, ...]
+  "prizes"                   jsonb DEFAULT '[]',
   "total_prize_pool"         integer DEFAULT 0,
-
-  -- Judging Config
-  "judging_criteria"         jsonb DEFAULT '[]',       -- [{name, description, weight, maxScore}, ...]
-  "ai_judging_weight"        integer DEFAULT 30,       -- AI score weight (%)
-  "human_judging_weight"     integer DEFAULT 70,       -- Human score weight (%)
+  "judging_criteria"         jsonb DEFAULT '[]',
+  "ai_judging_weight"        integer DEFAULT 30,
+  "human_judging_weight"     integer DEFAULT 70,
   "finalist_count"           integer DEFAULT 10,
-
-  -- Submission Requirements
-  "submission_requirements"  jsonb DEFAULT '{"githubRequired":true,"videoRequired":true,"deployedUrlRequired":false,"pitchDeckRequired":false,"maxScreenshots":5}',
-  "custom_submission_fields" jsonb DEFAULT '[]',       -- [{id, label, type, required, placeholder, options}, ...]
-
-  -- Prize Confirmation
+  "submission_requirements"  jsonb DEFAULT '{"githubRequired":true,"videoRequired":true,...}',
+  "custom_submission_fields" jsonb DEFAULT '[]',
   "prize_confirmed"          boolean DEFAULT false NOT NULL,
-
-  -- Status & Visibility
   "status"                   hackathon_status DEFAULT 'draft' NOT NULL,
   "published_at"             timestamp,
   "featured"                 boolean DEFAULT false NOT NULL,
   "visibility"               competition_visibility DEFAULT 'public' NOT NULL,
-  "access_code"              text,                    -- For private competitions
-
+  "access_code"              text,
   "created_at"               timestamp DEFAULT now() NOT NULL,
   "updated_at"               timestamp DEFAULT now() NOT NULL
 );
 ```
 
-**Status lifecycle:** `draft` → `pending_review` → `approved` → `active` → `judging` → `completed`
+Notable JSONB columns explained:
+- `tags` — free-form labels like `["Beginner Friendly", "Cash Prizes", "Remote"]`
+- `resources` — helping materials: `[{title: "API Docs", url: "https://..."}, ...]`
+- `prizes` — prize tiers: `[{position: 1, title: "First Place", amount: 50000, currency: "PKR"}, ...]`
+- `judging_criteria` — what judges score on: `[{name: "Innovation", weight: 25, maxScore: 10}, ...]`
+- `submission_requirements` — which fields are required/optional for participants
+- `custom_submission_fields` — organizer-defined extra questions: `[{id, label, type, required, placeholder}, ...]`
+- `target_participants` — audience filter: `["university_students", "developers"]` or `["all"]`
 
 ---
 
-## competition_prizes
+## 5. competition_prizes
 
-Individual prize tiers for a competition.
+While the `competitions` table stores prizes as JSONB for flexibility, this table provides a normalized structure for individual prize tiers when more detailed tracking is needed.
 
 **Schema file:** `src/lib/db/schema/competition-prizes.ts`
 
@@ -224,9 +246,9 @@ Individual prize tiers for a competition.
 CREATE TABLE "competition_prizes" (
   "id"              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "competition_id"  uuid NOT NULL REFERENCES competitions(id) ON DELETE CASCADE,
-  "position"        integer NOT NULL,         -- 1st, 2nd, 3rd
-  "title"           text NOT NULL,            -- "First Place", "Runner Up"
-  "amount"          integer NOT NULL,         -- Prize amount in smallest unit
+  "position"        integer NOT NULL,
+  "title"           text NOT NULL,
+  "amount"          integer NOT NULL,
   "currency"        text DEFAULT 'PKR' NOT NULL,
   "description"     text,
   "created_at"      timestamp DEFAULT now() NOT NULL
@@ -235,9 +257,9 @@ CREATE TABLE "competition_prizes" (
 
 ---
 
-## competition_sponsors
+## 6. competition_sponsors
 
-Sponsors for each competition (multi-sponsor support with tiers).
+Each competition can have multiple sponsors with different contribution types and tiers. When an organizer creates a competition, they're automatically added as the "title" sponsor with `is_organizer=true`. Additional sponsors can be added through the wizard.
 
 **Schema file:** `src/lib/db/schema/competition-sponsors.ts`
 
@@ -259,17 +281,19 @@ CREATE TABLE "competition_sponsors" (
   "sponsor_tier"             sponsor_tier DEFAULT 'partner' NOT NULL,
   "display_order"            integer DEFAULT 0,
   "featured"                 boolean DEFAULT false,
-  "is_organizer"             boolean DEFAULT false,   -- Auto-added for the hosting org
+  "is_organizer"             boolean DEFAULT false,
   "created_at"               timestamp DEFAULT now(),
   "updated_at"               timestamp DEFAULT now()
 );
 ```
 
+The `sponsor_tier` determines how prominently the sponsor is displayed on the competition page (title sponsors get the largest placement, partners the smallest). The `display_order` controls the sort order within each tier.
+
 ---
 
-## teams
+## 7. teams
 
-Participant teams for each competition.
+When a student registers for a competition, a team is created automatically (even for solo participants). Other students can join using the `invite_code`, which is an 8-character alphanumeric string. Only the team lead can submit the final project.
 
 **Schema file:** `src/lib/db/schema/teams.ts`
 
@@ -278,7 +302,7 @@ CREATE TABLE "teams" (
   "id"              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "competition_id"  uuid NOT NULL REFERENCES competitions(id) ON DELETE CASCADE,
   "name"            text NOT NULL,
-  "invite_code"     text NOT NULL UNIQUE,     -- 8-char code for team invites
+  "invite_code"     text NOT NULL UNIQUE,
   "lead_id"         uuid NOT NULL REFERENCES users(id),
   "created_at"      timestamp DEFAULT now() NOT NULL,
   "updated_at"      timestamp DEFAULT now() NOT NULL
@@ -287,9 +311,9 @@ CREATE TABLE "teams" (
 
 ---
 
-## team_members
+## 8. team_members
 
-Members of each team (including the lead).
+Tracks who belongs to which team. The team lead is also listed here with `role='lead'`. The unique constraint on `(team_id, user_id)` prevents a user from joining the same team twice.
 
 **Schema file:** `src/lib/db/schema/team-members.ts`
 
@@ -298,7 +322,7 @@ CREATE TABLE "team_members" (
   "id"        uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "team_id"   uuid NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
   "user_id"   uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  "role"      team_role DEFAULT 'member' NOT NULL,  -- 'lead' or 'member'
+  "role"      team_role DEFAULT 'member' NOT NULL,
   "joined_at" timestamp DEFAULT now() NOT NULL,
   CONSTRAINT "team_user_unique" UNIQUE("team_id", "user_id")
 );
@@ -306,9 +330,11 @@ CREATE TABLE "team_members" (
 
 ---
 
-## submissions
+## 9. submissions
 
-Project submissions by teams.
+When a team submits their project, all the project details are stored here — title, description, links (GitHub, video, deployed URL, pitch deck), screenshots, and tech stack. If the competition has custom submission fields, the participant's responses are stored in `custom_field_responses` as JSONB.
+
+The `status` column tracks the submission through validation, AI evaluation, human judging, and finalist selection. The `ai_score`, `human_score`, and `final_score` columns are updated as the evaluation pipeline progresses. The `rank` is set when the ranking engine runs.
 
 **Schema file:** `src/lib/db/schema/submissions.ts`
 
@@ -320,31 +346,31 @@ CREATE TABLE "submissions" (
   "submitted_by"           uuid NOT NULL REFERENCES users(id),
   "title"                  text NOT NULL,
   "description"            text NOT NULL,
-  "tech_stack"             jsonb DEFAULT '[]',       -- ["React", "Python", ...]
+  "tech_stack"             jsonb DEFAULT '[]',
   "github_url"             text,
   "video_url"              text,
   "deployed_url"           text,
   "pitch_deck_url"         text,
   "cover_image_url"        text,
-  "screenshots"            jsonb DEFAULT '[]',       -- ["url1", "url2", ...]
-  "custom_field_responses"  jsonb,                   -- {fieldId: "response", ...}
+  "screenshots"            jsonb DEFAULT '[]',
+  "custom_field_responses" jsonb,
   "status"                 submission_status DEFAULT 'submitted' NOT NULL,
-  "ai_score"               real,                     -- AI Judge composite score (0-10)
-  "human_score"            real,                     -- Human Judge composite score (0-10)
-  "final_score"            real,                     -- Weighted: AI*0.3 + Human*0.7
+  "ai_score"               real,
+  "human_score"            real,
+  "final_score"            real,
   "rank"                   integer,
   "created_at"             timestamp DEFAULT now() NOT NULL,
   "updated_at"             timestamp DEFAULT now() NOT NULL
 );
 ```
 
-**Status lifecycle:** `submitted` → `validating` → `valid`/`invalid`/`flagged` → `ai_evaluated` → `judged` → `finalist` → `winner`
+The submission status lifecycle: `submitted` → `validating` → `valid`/`invalid`/`flagged` → `ai_evaluated` → `judged` → `finalist` → `winner`
 
 ---
 
-## submission_validations
+## 10. submission_validations
 
-Automated validation check results for each submission.
+After a submission is created, the validation engine runs automated checks and records each result here. There are 4 check types: required fields, GitHub repo (is it public? does it have commits?), video link (is it accessible?), and deadline (was it submitted on time?).
 
 **Schema file:** `src/lib/db/schema/submission-validations.ts`
 
@@ -352,19 +378,23 @@ Automated validation check results for each submission.
 CREATE TABLE "submission_validations" (
   "id"             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "submission_id"  uuid NOT NULL REFERENCES submissions(id) ON DELETE CASCADE,
-  "check"          validation_check NOT NULL,   -- 'required_fields', 'github_repo', 'video_link', 'deadline'
-  "result"         validation_result NOT NULL,  -- 'pass', 'fail', 'warning'
-  "message"        text,                        -- Human-readable result
-  "details"        text,                        -- Technical details
+  "check"          validation_check NOT NULL,
+  "result"         validation_result NOT NULL,
+  "message"        text,
+  "details"        text,
   "created_at"     timestamp DEFAULT now() NOT NULL
 );
 ```
 
+Each submission typically has 3-4 validation rows — one per check type. If all pass, the submission status is set to `valid`. If any fail hard, it's set to `invalid`. If any produce warnings (like an empty GitHub repo), it's set to `flagged` for manual review.
+
 ---
 
-## ai_evaluations
+## 11. ai_evaluations
 
-GPT-4o AI Judge evaluation results.
+After validation, the AI Judge (powered by GPT-4o) reads the submission's description, GitHub repository, and video link, then generates a project summary and scores on 4 criteria: innovation, technical implementation, impact, and design. Each score is 1-10. The composite score is the average.
+
+The `flags` column stores anomalies the AI detected, like suspected plagiarism or a missing demo. The `raw_response` stores the full GPT response for debugging.
 
 **Schema file:** `src/lib/db/schema/ai-evaluations.ts`
 
@@ -372,21 +402,23 @@ GPT-4o AI Judge evaluation results.
 CREATE TABLE "ai_evaluations" (
   "id"              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "submission_id"   uuid NOT NULL REFERENCES submissions(id) ON DELETE CASCADE,
-  "summary"         text,                        -- AI-generated project summary
-  "scores"          jsonb,                       -- {innovation, technical, impact, design} (1-10 each)
-  "composite_score" real,                        -- Average of 4 scores
-  "flags"           jsonb DEFAULT '[]',          -- ["plagiarism_suspected", "missing_demo", ...]
+  "summary"         text,
+  "scores"          jsonb,
+  "composite_score" real,
+  "flags"           jsonb DEFAULT '[]',
   "model_used"      text DEFAULT 'gpt-4o',
-  "raw_response"    text,                        -- Full AI response for debugging
+  "raw_response"    text,
   "created_at"      timestamp DEFAULT now() NOT NULL
 );
 ```
 
+The `scores` JSONB has this shape: `{innovation: 8, technical: 7, impact: 9, design: 6}`
+
 ---
 
-## judge_assignments
+## 12. judge_assignments
 
-Maps judges to competitions they're assigned to evaluate.
+Maps which judges are assigned to which competitions. A judge can be assigned to multiple competitions, and a competition can have multiple judges. The unique constraint prevents assigning the same judge to the same competition twice.
 
 **Schema file:** `src/lib/db/schema/judge-assignments.ts`
 
@@ -395,7 +427,7 @@ CREATE TABLE "judge_assignments" (
   "id"              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "judge_id"        uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   "competition_id"  uuid NOT NULL REFERENCES competitions(id) ON DELETE CASCADE,
-  "expertise"       text,                        -- Judge's area of expertise for this assignment
+  "expertise"       text,
   "assigned_at"     timestamp DEFAULT now() NOT NULL,
   CONSTRAINT "judge_competition_unique" UNIQUE("judge_id", "competition_id")
 );
@@ -403,9 +435,9 @@ CREATE TABLE "judge_assignments" (
 
 ---
 
-## judge_invitations
+## 13. judge_invitations
 
-Pending judge invitations (before the judge has an account).
+When an organizer invites a judge who doesn't have a Spark account yet, the invitation is stored here. The judge receives an email with a link to the platform. When they sign up and complete the judge onboarding form, the system automatically matches their email to pending invitations and creates `judge_assignments` rows.
 
 **Schema file:** `src/lib/db/schema/judge-invitations.ts`
 
@@ -416,20 +448,22 @@ CREATE TABLE "judge_invitations" (
   "judge_name"      text NOT NULL,
   "judge_email"     text NOT NULL,
   "expertise"       text,
-  "invited_by"      uuid NOT NULL,              -- User ID of the organizer who invited
+  "invited_by"      uuid NOT NULL,
   "accepted"        boolean DEFAULT false NOT NULL,
   "accepted_at"     timestamp,
   "created_at"      timestamp DEFAULT now() NOT NULL
 );
 ```
 
-**Flow:** Organizer invites → row created with `accepted=false` → judge signs up → onboarding API matches by email → sets `accepted=true` + creates `judge_assignments` row
+The flow: organizer invites → row created (`accepted=false`) → judge signs up → onboarding API matches email → `accepted` set to `true` + `judge_assignments` row created automatically.
 
 ---
 
-## judge_evaluations
+## 14. judge_evaluations
 
-Human judge scores for each submission.
+Each judge scores each submission independently on 4 criteria (innovation, technical complexity, impact, design) with scores from 1-10. The `composite_score` is the average. Judges can optionally override the AI score by setting `override_ai=true` and leaving a comment explaining why.
+
+The unique constraint ensures a judge can only evaluate a submission once.
 
 **Schema file:** `src/lib/db/schema/judge-evaluations.ts`
 
@@ -438,10 +472,10 @@ CREATE TABLE "judge_evaluations" (
   "id"              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "judge_id"        uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   "submission_id"   uuid NOT NULL REFERENCES submissions(id) ON DELETE CASCADE,
-  "scores"          jsonb,                       -- {innovation, technical, impact, design} (1-10 each)
-  "composite_score" real,                        -- Average of 4 scores
-  "comments"        text,                        -- Judge's written feedback
-  "override_ai"     boolean DEFAULT false,       -- Whether judge overrode AI score
+  "scores"          jsonb,
+  "composite_score" real,
+  "comments"        text,
+  "override_ai"     boolean DEFAULT false,
   "created_at"      timestamp DEFAULT now() NOT NULL,
   "updated_at"      timestamp DEFAULT now() NOT NULL,
   CONSTRAINT "judge_submission_unique" UNIQUE("judge_id", "submission_id")
@@ -450,9 +484,9 @@ CREATE TABLE "judge_evaluations" (
 
 ---
 
-## final_rankings
+## 15. final_rankings
 
-Aggregated final rankings after judging is complete.
+After all judges have scored, the ranking engine aggregates AI scores (default 30% weight) and human scores (default 70% weight) into a final score, then ranks all submissions. The top N submissions (configurable via `finalist_count` on the competition) are marked as finalists, and the organizer can then select winners.
 
 **Schema file:** `src/lib/db/schema/final-rankings.ts`
 
@@ -464,7 +498,7 @@ CREATE TABLE "final_rankings" (
   "team_id"                uuid NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
   "ai_score"               real,
   "human_score_normalized" real,
-  "final_score"            real NOT NULL,        -- Weighted: AI*weight + Human*weight
+  "final_score"            real NOT NULL,
   "rank"                   integer NOT NULL,
   "is_finalist"            boolean DEFAULT false NOT NULL,
   "is_winner"              boolean DEFAULT false NOT NULL,
@@ -474,9 +508,9 @@ CREATE TABLE "final_rankings" (
 
 ---
 
-## notifications
+## 16. notifications
 
-In-app notifications with Pusher real-time delivery.
+In-app notifications delivered in real-time via Pusher WebSockets. When something happens (competition approved, submission validated, judge assigned, winner announced), a row is inserted here AND a Pusher event is fired so the user sees it instantly without refreshing.
 
 **Schema file:** `src/lib/db/schema/notifications.ts`
 
@@ -487,7 +521,7 @@ CREATE TABLE "notifications" (
   "type"       notification_type NOT NULL,
   "title"      text NOT NULL,
   "message"    text NOT NULL,
-  "link"       text,                            -- URL to navigate to on click
+  "link"       text,
   "read"       boolean DEFAULT false NOT NULL,
   "created_at" timestamp DEFAULT now() NOT NULL
 );
@@ -495,9 +529,9 @@ CREATE TABLE "notifications" (
 
 ---
 
-## payments
+## 17. payments
 
-Stripe payment records for competition publishing fees.
+Tracks Stripe payment transactions for competition publishing fees. Each payment links to an organization and optionally to a specific competition. Private competitions are free, so they won't have a payment record.
 
 **Schema file:** `src/lib/db/schema/payments.ts`
 
@@ -508,7 +542,7 @@ CREATE TABLE "payments" (
   "competition_id"              uuid REFERENCES competitions(id),
   "stripe_payment_intent_id"    text UNIQUE,
   "stripe_checkout_session_id"  text UNIQUE,
-  "amount"                      integer NOT NULL,    -- In smallest currency unit (paisa)
+  "amount"                      integer NOT NULL,
   "currency"                    text DEFAULT 'usd' NOT NULL,
   "status"                      payment_status DEFAULT 'pending' NOT NULL,
   "description"                 text,
@@ -519,9 +553,9 @@ CREATE TABLE "payments" (
 
 ---
 
-## audit_logs
+## 18. audit_logs
 
-Action audit trail for security and debugging.
+Records important actions for security and debugging. Who did what, when, and to which entity. The `metadata` JSONB stores additional context specific to each action.
 
 **Schema file:** `src/lib/db/schema/audit-logs.ts`
 
@@ -529,10 +563,10 @@ Action audit trail for security and debugging.
 CREATE TABLE "audit_logs" (
   "id"          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "user_id"     uuid REFERENCES users(id),
-  "action"      text NOT NULL,                   -- "competition.created", "submission.validated", etc.
-  "entity_type" text,                            -- "competition", "submission", "user"
+  "action"      text NOT NULL,
+  "entity_type" text,
   "entity_id"   uuid,
-  "metadata"    jsonb,                           -- Additional context
+  "metadata"    jsonb,
   "ip_address"  text,
   "created_at"  timestamp DEFAULT now() NOT NULL
 );
@@ -540,9 +574,9 @@ CREATE TABLE "audit_logs" (
 
 ---
 
-## platform_settings
+## 19. platform_settings
 
-Global platform configuration (key-value store).
+A simple key-value store for global platform configuration. Managed by admins through the Settings page. These values provide defaults that can be overridden per competition.
 
 **Schema file:** `src/lib/db/schema/platform-settings.ts`
 
@@ -554,133 +588,172 @@ CREATE TABLE "platform_settings" (
 );
 ```
 
-**Default keys:**
-| Key | Default | Description |
-|-----|---------|-------------|
-| `judging.ai_weight` | `30` | AI score weight percentage |
-| `judging.human_weight` | `70` | Human score weight percentage |
-| `judging.finalist_count` | `10` | Default number of finalists |
-| `competition.max_team_size` | `4` | Default max team size |
-| `competition.min_team_size` | `1` | Default min team size |
-| `competition.max_screenshots` | `5` | Max screenshot uploads |
+**Current settings:**
+
+| Key | Default Value | What It Controls |
+|-----|--------------|------------------|
+| `judging.ai_weight` | `30` | AI score weight in final ranking (%) |
+| `judging.human_weight` | `70` | Human score weight in final ranking (%) |
+| `judging.finalist_count` | `10` | How many top submissions become finalists |
+| `competition.max_team_size` | `4` | Default maximum team members |
+| `competition.min_team_size` | `1` | Default minimum (1 = solo allowed) |
+| `competition.max_screenshots` | `5` | Max screenshot uploads per submission |
 | `platform.name` | `Competition Spark` | Platform display name |
-| `platform.support_email` | `support@competitionspark.com` | Support email |
-| `platform.maintenance_mode` | `false` | Maintenance mode flag |
+| `platform.support_email` | `support@competitionspark.com` | Support email address |
+| `platform.maintenance_mode` | `false` | When true, only admins can access |
 
 ---
 
-## Entity Relationship Diagram
+## 20. Entity Relationship Diagram
+
+This diagram shows how all 19 tables relate to each other. Arrows indicate foreign key relationships, with the arrow pointing from the child table to the parent.
 
 ```
-users ─────────────────┐
-  │                    │
-  ├── organizations    │
-  │     └── competitions
-  │           ├── competition_prizes
-  │           ├── competition_sponsors
-  │           ├── teams
-  │           │     ├── team_members ── users
-  │           │     └── submissions
-  │           │           ├── submission_validations
-  │           │           ├── ai_evaluations
-  │           │           └── judge_evaluations ── users (judges)
-  │           ├── judge_assignments ── users (judges)
-  │           ├── judge_invitations
-  │           └── final_rankings
+users (central table)
   │
-  ├── notifications
-  └── audit_logs
+  ├─→ organizations (owner_id → users.id)
+  │     │
+  │     ├─→ competitions (organization_id → organizations.id)
+  │     │     │
+  │     │     ├─→ competition_prizes (competition_id → competitions.id)
+  │     │     ├─→ competition_sponsors (competition_id → competitions.id)
+  │     │     ├─→ judge_assignments (competition_id → competitions.id)
+  │     │     ├─→ judge_invitations (competition_id → competitions.id)
+  │     │     │
+  │     │     ├─→ teams (competition_id → competitions.id)
+  │     │     │     │
+  │     │     │     ├─→ team_members (team_id → teams.id, user_id → users.id)
+  │     │     │     │
+  │     │     │     └─→ submissions (team_id → teams.id)
+  │     │     │           │
+  │     │     │           ├─→ submission_validations (submission_id)
+  │     │     │           ├─→ ai_evaluations (submission_id)
+  │     │     │           ├─→ judge_evaluations (submission_id, judge_id → users.id)
+  │     │     │           └─→ final_rankings (submission_id, team_id, competition_id)
+  │     │     │
+  │     │     └─→ payments (competition_id → competitions.id)
+  │     │
+  │     └─→ payments (organization_id → organizations.id)
+  │
+  ├─→ notifications (user_id → users.id)
+  └─→ audit_logs (user_id → users.id)
 
-platform_settings (standalone key-value store)
-payments (links organizations ↔ competitions)
+platform_settings (standalone — no foreign keys)
 ```
 
 ---
 
-## Common Queries
+## 21. Common Queries
+
+These are the most frequently used queries in the application, written in both raw SQL and Drizzle ORM syntax for reference.
 
 ### Get all active public competitions
+
+This is the query behind the marketplace page at `/competitions`.
+
 ```sql
-SELECT c.*, o.name as org_name
+SELECT c.*, o.name AS org_name, o.logo_url AS org_logo
 FROM competitions c
 JOIN organizations o ON c.organization_id = o.id
 WHERE c.status = 'active' AND c.visibility = 'public'
-ORDER BY c.created_at DESC;
+ORDER BY c.created_at DESC
+LIMIT 12 OFFSET 0;
 ```
 
-### Get a user's team for a competition
+```typescript
+// Drizzle ORM equivalent
+const items = await db
+  .select({ ...competitions, orgName: organizations.name })
+  .from(competitions)
+  .innerJoin(organizations, eq(competitions.organizationId, organizations.id))
+  .where(and(eq(competitions.status, "active"), eq(competitions.visibility, "public")))
+  .orderBy(desc(competitions.createdAt))
+  .limit(12);
+```
+
+### Get a user's team for a specific competition
+
+Used when a student visits a competition they've registered for.
+
 ```sql
-SELECT t.*, tm.role as member_role
+SELECT t.*, tm.role AS member_role
 FROM teams t
 JOIN team_members tm ON tm.team_id = t.id
 WHERE tm.user_id = '{user_id}' AND t.competition_id = '{competition_id}';
 ```
 
-### Get ranked submissions for a competition
+```typescript
+const [membership] = await db
+  .select({ team: teams, role: teamMembers.role })
+  .from(teamMembers)
+  .innerJoin(teams, eq(teamMembers.teamId, teams.id))
+  .where(and(eq(teamMembers.userId, dbUser.id), eq(teams.competitionId, compId)));
+```
+
+### Get ranked submissions for a competition leaderboard
+
+Fetches all scored submissions ordered by final score, with team names and AI summaries.
+
 ```sql
-SELECT s.*, t.name as team_name, ae.summary as ai_summary
+SELECT s.*, t.name AS team_name, ae.summary AS ai_summary, ae.composite_score AS ai_score
 FROM submissions s
 JOIN teams t ON s.team_id = t.id
 LEFT JOIN ai_evaluations ae ON ae.submission_id = s.id
-WHERE s.competition_id = '{competition_id}' AND s.status != 'invalid'
+WHERE s.competition_id = '{comp_id}' AND s.status NOT IN ('submitted', 'validating', 'invalid')
 ORDER BY s.final_score DESC NULLS LAST;
 ```
 
-### Get judge evaluation progress
+### Get judge evaluation progress for a competition
+
+Shows how many submissions each judge has evaluated out of the total.
+
 ```sql
 SELECT
   u.first_name, u.last_name, u.email,
-  COUNT(je.id) as evaluations_done,
-  (SELECT COUNT(*) FROM submissions WHERE competition_id = '{comp_id}') as total_submissions
+  COUNT(je.id) AS evaluations_done,
+  (SELECT COUNT(*) FROM submissions WHERE competition_id = '{comp_id}') AS total_subs
 FROM judge_assignments ja
 JOIN users u ON ja.judge_id = u.id
 LEFT JOIN judge_evaluations je ON je.judge_id = u.id
+  AND je.submission_id IN (SELECT id FROM submissions WHERE competition_id = '{comp_id}')
 WHERE ja.competition_id = '{comp_id}'
-GROUP BY u.id;
+GROUP BY u.id, u.first_name, u.last_name, u.email;
 ```
 
-### Platform stats for admin dashboard
+### Platform-wide stats for admin dashboard
+
+A single query that returns all key metrics for the admin command center.
+
 ```sql
 SELECT
-  (SELECT COUNT(*) FROM users) as total_users,
-  (SELECT COUNT(*) FROM users WHERE role = 'student') as students,
-  (SELECT COUNT(*) FROM users WHERE role = 'sponsor') as sponsors,
-  (SELECT COUNT(*) FROM competitions WHERE status = 'active') as active_competitions,
-  (SELECT COUNT(*) FROM submissions) as total_submissions,
-  (SELECT COUNT(*) FROM organizations WHERE verification = 'verified') as verified_orgs;
+  (SELECT COUNT(*) FROM users) AS total_users,
+  (SELECT COUNT(*) FROM users WHERE role = 'student') AS students,
+  (SELECT COUNT(*) FROM users WHERE role = 'sponsor') AS sponsors,
+  (SELECT COUNT(*) FROM users WHERE role = 'judge') AS judges,
+  (SELECT COUNT(*) FROM competitions) AS total_competitions,
+  (SELECT COUNT(*) FROM competitions WHERE status = 'active') AS active_competitions,
+  (SELECT COUNT(*) FROM submissions) AS total_submissions,
+  (SELECT COUNT(*) FROM organizations WHERE verification = 'verified') AS verified_orgs;
 ```
 
 ---
 
-## Drizzle ORM Usage
+## Notes for New Developers
 
-All tables are defined in TypeScript at `src/lib/db/schema/`. The Drizzle client is at `src/lib/db/index.ts`.
+1. **Never modify migration files** in the `drizzle/` folder directly. Always change the TypeScript schema files in `src/lib/db/schema/` and run `npx drizzle-kit generate` to create a new migration.
 
-```typescript
-import { db } from "@/lib/db";
-import { users, competitions } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+2. **JSONB columns** are used extensively for flexible data (prizes, tags, criteria, custom fields). Drizzle provides `.$type<T>()` for TypeScript type safety on these columns.
 
-// Query example
-const [user] = await db
-  .select()
-  .from(users)
-  .where(eq(users.email, "test@example.com"));
-```
+3. **UUID primary keys** are used everywhere instead of auto-incrementing integers. This prevents ID enumeration attacks and works well with distributed systems.
 
-### Migration Commands
+4. **Cascade deletes** — most foreign keys use `ON DELETE CASCADE`, meaning if you delete a competition, all its teams, submissions, evaluations, and rankings are automatically cleaned up. Be careful with user deletion — it cascades to organizations which cascades to everything.
 
-```bash
-# Generate migration from schema changes
-npx drizzle-kit generate
+5. **The `updated_at` column** is NOT automatically updated by PostgreSQL. The application code must set it manually in every UPDATE query: `.set({ ..., updatedAt: new Date() })`.
 
-# Push schema directly to database (dev)
-npx drizzle-kit push
-
-# View current schema
-npx drizzle-kit studio
-```
+6. **Enum changes** require a new migration. You cannot add values to a PostgreSQL enum without running an ALTER TYPE command via a migration.
 
 ---
 
-*Documentation generated for the Spark Hackathon Hub platform. Last updated: March 2026.*
+*Database documentation for the Spark Hackathon Hub platform.*
+*Schema: 19 tables, 10 enums, PostgreSQL + Drizzle ORM.*
+*Last updated: March 2026.*
