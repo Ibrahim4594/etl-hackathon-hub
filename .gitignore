@@ -33,9 +33,33 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# uploaded files (dev)
+/public/uploads/
+
 # vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# clerk configuration (can include secrets)
+/.clerk/
+
+.vercel
+
+# Documentation
+docs/
+
+# Temp files
+*.output
+/tmp/
+
+# Claude Code files
+.claude/
+CLAUDE.md
+*.claude
+plans/
+
+# Scripts (one-time use)
+scripts/
