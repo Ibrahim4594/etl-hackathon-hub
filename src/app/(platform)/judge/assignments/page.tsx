@@ -1,7 +1,6 @@
 import { serverAuth } from "@/lib/auth/server-auth";
 import { db } from "@/lib/db";
 import {
-  users,
   judgeAssignments,
   competitions,
   organizations,
@@ -10,6 +9,7 @@ import {
 } from "@/lib/db/schema";
 import { eq, and, count, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
+import { resolveOnboardingUser } from "@/lib/auth/resolve-onboarding-user";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -26,14 +26,14 @@ import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress
 import { ClipboardList, ArrowRight, Building2 } from "lucide-react";
 
 export default async function JudgeAssignmentsPage() {
-  const { userId: clerkId } = await serverAuth();
-  if (!clerkId) redirect("/sign-in");
+  const { userId } = await serverAuth();
+  if (!userId) redirect("/sign-in");
 
-  const [dbUser] = await db
-    .select()
-    .from(users)
-    .where(eq(users.clerkId, clerkId));
-  if (!dbUser || (dbUser.role !== "judge" && dbUser.role !== "admin")) redirect("/onboarding");
+  const dbUser = await resolveOnboardingUser(userId);
+  if (!dbUser || !dbUser.onboardingComplete) redirect("/onboarding");
+  if (dbUser.role !== "judge" && dbUser.role !== "admin") {
+    redirect(dbUser.role ? `/${dbUser.role}/dashboard` : "/onboarding");
+  }
 
   // Fetch judge's assignments with competition and organization details
   const assignments = await db
@@ -150,9 +150,9 @@ export default async function JudgeAssignmentsPage() {
                       Leaderboard
                     </Button>
                   </Link>
-                  <Link href={`/competitions/${assignment.competitionSlug}`}>
+                  <Link href={`/judge/assignments/${assignment.assignmentId}/submissions`}>
                     <Button variant="outline" size="sm">
-                      View
+                      View Submissions
                       <ArrowRight className="ml-1 h-4 w-4" />
                     </Button>
                   </Link>

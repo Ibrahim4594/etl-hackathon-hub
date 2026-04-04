@@ -240,3 +240,56 @@ export async function PATCH(
 
   return NextResponse.json({ competition: result });
 }
+
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+
+  const { userId } = await serverAuth();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const [dbUser] = await db
+    .select()
+    .from(users)
+    .where(eq(users.clerkId, userId));
+
+  if (!dbUser) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  const [competition] = await db
+    .select()
+    .from(competitions)
+    .where(eq(competitions.id, id));
+
+  if (!competition) {
+    return NextResponse.json({ error: "Competition not found" }, { status: 404 });
+  }
+
+  // Only the owner org or admin can delete; only drafts/cancelled can be deleted
+  if (dbUser.role !== "admin") {
+    const [org] = await db
+      .select()
+      .from(organizations)
+      .where(eq(organizations.id, competition.organizationId));
+
+    if (!org || org.ownerId !== dbUser.id) {
+      return NextResponse.json({ error: "Not authorized to delete this hackathon" }, { status: 403 });
+    }
+
+    if (!["draft", "cancelled"].includes(competition.status)) {
+      return NextResponse.json(
+        { error: "Only draft or cancelled hackathons can be deleted" },
+        { status: 400 }
+      );
+    }
+  }
+
+  await db.delete(competitions).where(eq(competitions.id, id));
+
+  return NextResponse.json({ success: true });
+}

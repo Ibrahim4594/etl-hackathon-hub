@@ -25,6 +25,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { format, isPast, formatDistanceToNow } from "date-fns";
+import { HackathonManagementActions } from "@/components/competitions/hackathon-management-actions";
 
 const STATUS_CONFIG: Record<string, { color: string; bg: string; border: string; label: string; dot?: boolean }> = {
   draft: { color: "text-zinc-400", bg: "bg-zinc-500/10", border: "border-zinc-500/20", label: "Draft" },
@@ -101,15 +102,15 @@ export default async function SponsorCompetitionsPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">My Competitions</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Hackathon Management</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {sponsorCompetitions.length} competition{sponsorCompetitions.length !== 1 ? "s" : ""} · {org.name}
+            {sponsorCompetitions.length} hackathon{sponsorCompetitions.length !== 1 ? "s" : ""} · {org.name}
           </p>
         </div>
         <Link href="/sponsor/competitions/new">
           <Button className="shadow-sm">
             <Plus className="mr-1.5 h-4 w-4" />
-            New Competition
+            New Hackathon
           </Button>
         </Link>
       </div>
@@ -117,13 +118,13 @@ export default async function SponsorCompetitionsPage() {
       {sponsorCompetitions.length === 0 ? (
         <EmptyState
           icon={Trophy}
-          title="No competitions yet"
-          description="Launch your first competition to discover top talent from across Pakistan."
+          title="No hackathons yet"
+          description="Launch your first hackathon to discover top talent from across Pakistan."
         >
           <Link href="/sponsor/competitions/new">
             <Button>
               <Plus className="mr-1.5 h-4 w-4" />
-              Create Competition
+              Create Hackathon
             </Button>
           </Link>
         </EmptyState>
@@ -137,10 +138,11 @@ export default async function SponsorCompetitionsPage() {
             const deadlinePast = deadlineDate ? isPast(new Date(deadlineDate)) : false;
 
             return (
-              <Link key={comp.id} href={`/sponsor/competitions/${comp.id}`}>
-                <Card className="group relative overflow-hidden border-border/50 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md">
-                  {/* Status gradient strip */}
-                  <div className={`absolute inset-x-0 top-0 h-1 ${cfg.bg.replace("/10", "")}`} />
+              <div key={comp.id} className="flex flex-col gap-2">
+                <Link href={`/sponsor/competitions/${comp.id}`}>
+                  <Card className="group relative overflow-hidden border-border/50 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md">
+                    {/* Status gradient strip */}
+                    <div className={`absolute inset-x-0 top-0 h-1 ${cfg.bg.replace("/10", "")}`} />
 
                   <CardContent className="p-5">
                     <div className="flex items-start justify-between gap-3">
@@ -198,7 +200,13 @@ export default async function SponsorCompetitionsPage() {
                     </div>
                   </CardContent>
                 </Card>
-              </Link>
+                </Link>
+                <HackathonManagementActions
+                  competitionId={comp.id}
+                  competitionSlug={comp.slug ?? ""}
+                  status={comp.status}
+                />
+              </div>
             );
           })}
 
@@ -210,7 +218,7 @@ export default async function SponsorCompetitionsPage() {
                   <Sparkles className="h-6 w-6 text-primary" />
                 </div>
                 <p className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
-                  Launch a New Competition
+                  Launch a New Hackathon
                 </p>
               </CardContent>
             </Card>

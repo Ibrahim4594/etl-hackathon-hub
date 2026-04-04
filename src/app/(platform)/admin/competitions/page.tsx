@@ -1,10 +1,11 @@
-import { serverAuth } from "@/lib/auth/server-auth";
+﻿import { serverAuth } from "@/lib/auth/server-auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { competitions, organizations, competitionSponsors } from "@/lib/db/schema";
 import { eq, desc, inArray } from "drizzle-orm";
 import { resolveOnboardingUser } from "@/lib/auth/resolve-onboarding-user";
 import { PageHeader } from "@/components/shared/page-header";
+import { InviteJudgeDialog } from "@/components/judge/invite-judge-dialog";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -66,7 +67,6 @@ export default async function AdminCompetitionsPage({ searchParams }: PageProps)
   const { status: filterStatus } = await searchParams;
   const activeFilter = filterStatus || "all";
 
-  // Fetch ALL competitions (no status filter in the query)
   const allCompetitions = await db
     .select({
       id: competitions.id,
@@ -86,20 +86,17 @@ export default async function AdminCompetitionsPage({ searchParams }: PageProps)
     .innerJoin(organizations, eq(competitions.organizationId, organizations.id))
     .orderBy(desc(competitions.createdAt));
 
-  // Compute counts per status for the filter tabs
   const counts: Record<string, number> = {};
   for (const comp of allCompetitions) {
     counts[comp.status] = (counts[comp.status] ?? 0) + 1;
   }
 
-  // Apply client-side status filter
   const filteredCompetitions = activeFilter === "all"
     ? allCompetitions
     : allCompetitions.filter((c) => c.status === activeFilter);
 
-  // Fetch sponsor info for filtered competitions
   const compIds = filteredCompetitions.map((c) => c.id);
-  let sponsorsByComp = new Map<string, { count: number; totalAmount: number; noContact: number }>();
+  const sponsorsByComp = new Map<string, { count: number; totalAmount: number; noContact: number }>();
   if (compIds.length > 0) {
     const allSponsors = await db
       .select()
@@ -117,21 +114,26 @@ export default async function AdminCompetitionsPage({ searchParams }: PageProps)
 
   return (
     <div className="space-y-8">
-      <PageHeader
-        title="Competition Management"
-        description="View and manage all competitions across all statuses"
-      />
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <PageHeader
+          title="Hackathon Management"
+          description="View and manage all hackathons across all statuses"
+        />
+        {filteredCompetitions.length > 0 && (
+          <InviteJudgeDialog competitionId={filteredCompetitions[0].id} />
+        )}
+      </div>
 
       <CompetitionStatusFilter currentStatus={activeFilter} counts={counts} />
 
       {filteredCompetitions.length === 0 ? (
         <EmptyState
           icon={Trophy}
-          title="No competitions"
+          title="No hackathons"
           description={
             activeFilter === "all"
-              ? "No competitions have been created yet."
-              : `No competitions with status "${statusLabel[activeFilter] ?? activeFilter}".`
+              ? "No hackathons have been created yet."
+              : `No hackathons with status "${statusLabel[activeFilter] ?? activeFilter}".`
           }
         />
       ) : (
@@ -139,7 +141,7 @@ export default async function AdminCompetitionsPage({ searchParams }: PageProps)
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Competition</TableHead>
+                <TableHead>Hackathon</TableHead>
                 <TableHead>Organization</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Category</TableHead>
@@ -186,9 +188,9 @@ export default async function AdminCompetitionsPage({ searchParams }: PageProps)
                         Confirmed
                       </Badge>
                     ) : (
-                      <Badge className="bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20">
+                      <Badge className="bg-zinc-400/10 text-zinc-400 border-zinc-400/20 hover:bg-zinc-400/20">
                         <ShieldX className="size-3 mr-1" />
-                        Not Confirmed
+                        Unconfirmed
                       </Badge>
                     )}
                   </TableCell>
@@ -233,7 +235,7 @@ export default async function AdminCompetitionsPage({ searchParams }: PageProps)
 
       {filteredCompetitions.length > 0 && (
         <p className="text-sm text-muted-foreground">
-          Showing {filteredCompetitions.length} competition{filteredCompetitions.length !== 1 ? "s" : ""}
+          Showing {filteredCompetitions.length} hackathon{filteredCompetitions.length !== 1 ? "s" : ""}
           {activeFilter !== "all" && ` with status "${statusLabel[activeFilter] ?? activeFilter}"`}
         </p>
       )}

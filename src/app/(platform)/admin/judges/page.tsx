@@ -133,7 +133,7 @@ export default async function AdminJudgesPage() {
         <EmptyState
           icon={Gavel}
           title="No judges"
-          description="No users with the judge role exist yet. Invite judges from the competition management page."
+          description="No users with the judge role exist yet. Invite judges from the Hackathon Management page."
         />
       ) : (
         <div className="rounded-lg border">

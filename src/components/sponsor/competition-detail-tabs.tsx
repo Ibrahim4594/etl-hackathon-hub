@@ -268,6 +268,7 @@ export function CompetitionDetailTabs({
                   submissions={submissions}
                 />
               )}
+              <InviteJudgeDialog competitionId={c.id} />
               {c.slug && (
                 <Link href={`/competitions/${c.slug}`} target="_blank">
                   <Button variant="ghost" size="sm">
@@ -551,7 +552,6 @@ export function CompetitionDetailTabs({
                 {judges.length} judge{judges.length !== 1 ? "s" : ""} · {totalSubs} submission{totalSubs !== 1 ? "s" : ""} to evaluate
               </p>
             </div>
-            <InviteJudgeDialog competitionId={c.id} />
           </div>
 
           {judges.length === 0 ? (

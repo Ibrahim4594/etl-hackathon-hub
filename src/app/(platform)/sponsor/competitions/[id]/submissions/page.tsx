@@ -247,6 +247,7 @@ export default async function SponsorSubmissionsPage({
                     <th className="px-4 py-3 text-right">Final Score</th>
                     <th className="px-4 py-3 text-right">Rank</th>
                     <th className="px-4 py-3 text-right">Submitted At</th>
+                    <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -256,12 +257,7 @@ export default async function SponsorSubmissionsPage({
                       className="transition-colors hover:bg-muted/50"
                     >
                       <td className="px-4 py-3">
-                        <Link
-                          href={`/sponsor/competitions/${id}`}
-                          className="text-sm font-medium hover:text-primary hover:underline"
-                        >
-                          {sub.title}
-                        </Link>
+                        {sub.title}
                       </td>
                       <td className="px-4 py-3 text-sm text-muted-foreground">
                         {sub.teamName}
@@ -323,6 +319,14 @@ export default async function SponsorSubmissionsPage({
                           day: "numeric",
                           year: "numeric",
                         })}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex gap-2 justify-end">
+                          <Link href={`/sponsor/competitions/${id}/submissions/${sub.id}`}>
+                            <Button size="sm" variant="outline">View Submission</Button>
+                          </Link>
+                          <Button size="sm" variant="default">Assign Submission</Button>
+                        </div>
                       </td>
                     </tr>
                   ))}

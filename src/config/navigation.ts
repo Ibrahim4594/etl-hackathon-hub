@@ -30,7 +30,7 @@ export const studentNav: NavItem[] = [
 
 export const sponsorNav: NavItem[] = [
   { title: "Dashboard", href: "/sponsor/dashboard", icon: LayoutDashboard },
-  { title: "My Competitions", href: "/sponsor/competitions", icon: Trophy },
+  { title: "Hackathon Management", href: "/sponsor/competitions", icon: Trophy },
   { title: "Create New", href: "/sponsor/competitions/new", icon: Plus },
   { title: "Analytics", href: "/sponsor/analytics", icon: BarChart3 },
   { title: "Organization", href: "/sponsor/organization", icon: Building2 },
@@ -46,7 +46,7 @@ export const adminNav: NavItem[] = [
   { title: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
   { title: "Users", href: "/admin/users", icon: Users },
   { title: "Organizations", href: "/admin/organizations", icon: Building2 },
-  { title: "Competitions", href: "/admin/competitions", icon: Trophy },
+  { title: "Hackathon Management", href: "/admin/competitions", icon: Trophy },
   { title: "Submissions", href: "/admin/submissions", icon: FileText },
   { title: "Judges", href: "/admin/judges", icon: Gavel },
   { title: "Analytics", href: "/admin/analytics", icon: BarChart3 },

@@ -271,32 +271,7 @@ export function StepReview() {
             </div>
           </div>
 
-          <Separator />
-
-          {/* Timeline */}
-          <div>
-            <SectionHeader icon={Calendar} title="Timeline" />
-            <div className="rounded-lg border p-3 space-y-0.5">
-              <Field label="Registration" value={
-                formData.registrationStart && formData.registrationEnd
-                  ? `${formatDate(formData.registrationStart)} - ${formatDate(formData.registrationEnd)}`
-                  : null
-              } />
-              <Field label="Submission" value={
-                formData.submissionStart && formData.submissionEnd
-                  ? `${formatDate(formData.submissionStart)} - ${formatDate(formData.submissionEnd)}`
-                  : null
-              } />
-              <Field label="Judging" value={
-                formData.judgingStart && formData.judgingEnd
-                  ? `${formatDate(formData.judgingStart)} - ${formatDate(formData.judgingEnd)}`
-                  : null
-              } />
-              <Field label="Results" value={formatDate(formData.resultsDate)} />
-            </div>
-          </div>
-
-          <Separator />
+          {/* Timeline section removed for organizer flow */}
 
           {/* Prizes */}
           <div>
@@ -334,69 +309,9 @@ export function StepReview() {
 
           <Separator />
 
-          {/* Sponsors */}
-          <div>
-            <SectionHeader icon={Building2} title="Sponsors" />
-            <div className="rounded-lg border p-3 space-y-0.5">
-              <Field
-                label="Count"
-                value={
-                  formData.sponsors.length > 0
-                    ? `${formData.sponsors.length} sponsor(s) added`
-                    : "No additional sponsors"
-                }
-              />
-              {formData.sponsors.map((s, i) => (
-                <Field
-                  key={i}
-                  label={s.companyName || `Sponsor ${i + 1}`}
-                  value={
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <Badge variant="secondary" className="text-[10px]">
-                        {s.sponsorTier.charAt(0).toUpperCase() + s.sponsorTier.slice(1)}
-                      </Badge>
-                      <Badge variant="outline" className="text-[10px]">
-                        {s.contributionType.replace(/_/g, " ")}
-                      </Badge>
-                      {s.contributionAmount ? (
-                        <span className="text-xs font-medium text-primary">
-                          {formatCurrency(s.contributionAmount)}
-                        </span>
-                      ) : null}
-                    </div>
-                  }
-                />
-              ))}
-            </div>
-          </div>
+          {/* Sponsors section removed for organizer flow */}
 
-          <Separator />
-
-          {/* Judging */}
-          <div>
-            <SectionHeader icon={Scale} title="Judging Configuration" />
-            <div className="rounded-lg border p-3 space-y-0.5">
-              <Field
-                label="AI Weight"
-                value={`${formData.aiJudgingWeight}%`}
-              />
-              <Field
-                label="Human Weight"
-                value={`${formData.humanJudgingWeight}%`}
-              />
-              <Field label="Finalists" value={formData.finalistCount} />
-              <Field
-                label="Criteria"
-                value={
-                  formData.judgingCriteria.length > 0
-                    ? formData.judgingCriteria.map((c) => c.name || "Unnamed").join(", ")
-                    : null
-                }
-              />
-            </div>
-          </div>
-
-          <Separator />
+          {/* Judging section removed for organizer flow */}
 
           {/* Submission Requirements */}
           <div>
