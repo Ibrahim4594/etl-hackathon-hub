@@ -5,6 +5,8 @@ import {
   organizations,
   submissions,
   teams,
+  judgeAssignments,
+  users,
 } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { resolveOnboardingUser } from "@/lib/auth/resolve-onboarding-user";
@@ -22,6 +24,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { SUBMISSION_STATUS_COLORS, formatStatus } from "@/lib/constants/status-colors";
+import { AssignSubmissionDialog } from "@/components/submissions/assign-submission-dialog";
 
 type FilterTab = "all" | "valid" | "flagged" | "invalid" | "finalists" | "winners";
 
@@ -97,6 +100,24 @@ export default async function SponsorSubmissionsPage({
     .from(submissions)
     .innerJoin(teams, eq(submissions.teamId, teams.id))
     .where(eq(submissions.competitionId, id));
+
+  // Fetch judges assigned to this competition
+  const assignedJudges = await db
+    .select({
+      id: users.id,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      email: users.email,
+    })
+    .from(judgeAssignments)
+    .innerJoin(users, eq(judgeAssignments.judgeId, users.id))
+    .where(eq(judgeAssignments.competitionId, id));
+
+  const judges = assignedJudges.map((j) => ({
+    id: j.id,
+    name: [j.firstName, j.lastName].filter(Boolean).join(" ") || "Unnamed Judge",
+    email: j.email,
+  }));
 
   // Compute stats
   const totalCount = allSubmissions.length;
@@ -325,7 +346,11 @@ export default async function SponsorSubmissionsPage({
                           <Link href={`/sponsor/competitions/${id}/submissions/${sub.id}`}>
                             <Button size="sm" variant="outline">View Submission</Button>
                           </Link>
-                          <Button size="sm" variant="default">Assign Submission</Button>
+                          <AssignSubmissionDialog
+                            submissionId={sub.id}
+                            submissionTitle={sub.title}
+                            judges={judges}
+                          />
                         </div>
                       </td>
                     </tr>
