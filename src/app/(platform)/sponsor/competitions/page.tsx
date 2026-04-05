@@ -26,6 +26,8 @@ import {
 } from "lucide-react";
 import { format, isPast, formatDistanceToNow } from "date-fns";
 import { HackathonManagementActions } from "@/components/competitions/hackathon-management-actions";
+import { PublishButton } from "@/components/competitions/publish-button";
+import { GoLiveButton } from "@/components/competitions/go-live-button";
 
 const STATUS_CONFIG: Record<string, { color: string; bg: string; border: string; label: string; dot?: boolean }> = {
   draft: { color: "text-zinc-400", bg: "bg-zinc-500/10", border: "border-zinc-500/20", label: "Draft" },
@@ -201,11 +203,19 @@ export default async function SponsorCompetitionsPage() {
                   </CardContent>
                 </Card>
                 </Link>
-                <HackathonManagementActions
-                  competitionId={comp.id}
-                  competitionSlug={comp.slug ?? ""}
-                  status={comp.status}
-                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <HackathonManagementActions
+                    competitionId={comp.id}
+                    competitionSlug={comp.slug ?? ""}
+                    status={comp.status}
+                  />
+                  {comp.status === "draft" && (
+                    <PublishButton competitionId={comp.id} />
+                  )}
+                  {comp.status === "approved" && (
+                    <GoLiveButton competitionId={comp.id} size="sm" />
+                  )}
+                </div>
               </div>
             );
           })}
