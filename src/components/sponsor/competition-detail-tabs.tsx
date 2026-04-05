@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { format, formatDistanceToNow, isPast } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,6 @@ import { QuickPublishButton } from "@/components/competitions/quick-publish-butt
 import { GoLiveButton } from "@/components/competitions/go-live-button";
 import { AnnounceWinnersDialog } from "@/components/competitions/announce-winners-dialog";
 import {
-  Calendar,
   Edit,
   Trophy,
   Users,
@@ -28,7 +27,6 @@ import {
   ArrowUpRight,
   TrendingUp,
   Target,
-  Building2,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -94,28 +92,6 @@ interface StatusCounts {
   winner: number;
 }
 
-interface SponsorRow {
-  id: string;
-  competitionId: string;
-  companyName: string;
-  logoUrl: string | null;
-  website: string | null;
-  contributionType: string;
-  contributionTitle: string;
-  contributionDescription: string | null;
-  contributionAmount: number | null;
-  contributionCurrency: string | null;
-  contactPersonName: string | null;
-  contactPersonEmail: string | null;
-  contactPersonPhone: string | null;
-  sponsorTier: string;
-  displayOrder: number | null;
-  featured: boolean | null;
-  isOrganizer: boolean | null;
-  createdAt: string | null;
-  updatedAt: string | null;
-}
-
 interface Props {
   competition: CompetitionData;
   submissions: SubmissionRow[];
@@ -123,7 +99,6 @@ interface Props {
   statusCounts: StatusCounts;
   totalTeams: number;
   totalParticipants: number;
-  sponsors: SponsorRow[];
 }
 
 // ---------------------------------------------------------------------------
@@ -156,11 +131,6 @@ function fmtDate(d: string | null) {
   return format(new Date(d), "MMM d, yyyy");
 }
 
-function fmtDateTime(d: string | null) {
-  if (!d) return "Not set";
-  return format(new Date(d), "MMM d, yyyy 'at' h:mm a");
-}
-
 function fmtScore(v: number | null) {
   if (v === null || v === undefined) return "—";
   return v.toFixed(1);
@@ -169,20 +139,6 @@ function fmtScore(v: number | null) {
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
-const TIER_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  title: { label: "Title", color: "text-amber-400", bg: "bg-amber-500/10" },
-  gold: { label: "Gold", color: "text-yellow-400", bg: "bg-yellow-500/10" },
-  silver: { label: "Silver", color: "text-zinc-300", bg: "bg-zinc-400/10" },
-  bronze: { label: "Bronze", color: "text-orange-400", bg: "bg-orange-500/10" },
-  partner: { label: "Partner", color: "text-blue-400", bg: "bg-blue-500/10" },
-};
-
-function fmtContributionType(type: string) {
-  return type
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (l) => l.toUpperCase());
-}
-
 export function CompetitionDetailTabs({
   competition,
   submissions,
@@ -190,7 +146,6 @@ export function CompetitionDetailTabs({
   statusCounts,
   totalTeams,
   totalParticipants,
-  sponsors,
 }: Props) {
   const c = competition;
   const cfg = STATUS_CONFIG[c.status] ?? STATUS_CONFIG.draft;
@@ -203,14 +158,6 @@ export function CompetitionDetailTabs({
   const avgHuman =
     submissions.filter((s) => s.humanScore !== null).reduce((a, s) => a + (s.humanScore ?? 0), 0) /
       (submissions.filter((s) => s.humanScore !== null).length || 1) || 0;
-
-  // Timeline steps
-  const timelineSteps = [
-    { label: "Registration", start: c.registrationStart, end: c.registrationEnd, icon: Users },
-    { label: "Submissions", start: c.submissionStart, end: c.submissionEnd, icon: FileText },
-    { label: "Judging", start: c.judgingStart, end: c.judgingEnd, icon: Gavel },
-    { label: "Results", start: c.resultsDate, end: null, icon: Trophy },
-  ];
 
   return (
     <div className="space-y-6">
@@ -304,7 +251,7 @@ export function CompetitionDetailTabs({
 
       {/* ── Tabs ────────────────────────────────────────────────── */}
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5 rounded-xl bg-muted/50 p-1">
+        <TabsList className="grid w-full grid-cols-2 rounded-xl bg-muted/50 p-1">
           <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <BarChart3 className="mr-1.5 h-3.5 w-3.5" />
             Overview
@@ -317,28 +264,6 @@ export function CompetitionDetailTabs({
                 {totalSubs}
               </span>
             )}
-          </TabsTrigger>
-          <TabsTrigger value="judges" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <Gavel className="mr-1.5 h-3.5 w-3.5" />
-            Judges
-            {judges.length > 0 && (
-              <span className="ml-1.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                {judges.length}
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="sponsors" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <Building2 className="mr-1.5 h-3.5 w-3.5" />
-            Sponsors
-            {sponsors.length > 0 && (
-              <span className="ml-1.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                {sponsors.length}
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="timeline" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <Calendar className="mr-1.5 h-3.5 w-3.5" />
-            Timeline
           </TabsTrigger>
         </TabsList>
 
@@ -543,253 +468,7 @@ export function CompetitionDetailTabs({
           )}
         </TabsContent>
 
-        {/* ─── Judges Tab ────────────────────────────────────────── */}
-        <TabsContent value="judges" className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-medium">Assigned Judges</h3>
-              <p className="text-xs text-muted-foreground">
-                {judges.length} judge{judges.length !== 1 ? "s" : ""} · {totalSubs} submission{totalSubs !== 1 ? "s" : ""} to evaluate
-              </p>
-            </div>
-          </div>
 
-          {judges.length === 0 ? (
-            <Card className="border-border/50 shadow-sm">
-              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-500/5">
-                  <Gavel className="h-7 w-7 text-amber-500" />
-                </div>
-                <p className="mt-4 text-sm font-medium">No judges assigned</p>
-                <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-                  Invite judges to evaluate submissions for this competition.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {judges.map((judge) => {
-                const name =
-                  judge.firstName || judge.lastName
-                    ? `${judge.firstName ?? ""} ${judge.lastName ?? ""}`.trim()
-                    : "Unnamed Judge";
-                const initials = name
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")
-                  .slice(0, 2)
-                  .toUpperCase();
-                const pct = totalSubs > 0 ? (judge.evaluationCount / totalSubs) * 100 : 0;
-
-                return (
-                  <Card key={judge.assignmentId} className="border-border/50 shadow-md transition-all hover:border-primary/20 hover:shadow-sm">
-                    <CardContent className="flex items-center gap-4 p-4">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-xs font-bold text-primary">
-                        {initials}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="truncate text-sm font-semibold">{name}</p>
-                        <p className="truncate text-xs text-muted-foreground">{judge.email}</p>
-                      </div>
-                      <div className="hidden items-center gap-3 sm:flex">
-                        <div className="w-24">
-                          <Progress value={pct} className="h-1.5" />
-                        </div>
-                        <span className="text-xs font-medium">
-                          {judge.evaluationCount}/{totalSubs}
-                        </span>
-                      </div>
-                      <span className="text-xs text-muted-foreground">
-                        Joined {fmtDate(judge.assignedAt)}
-                      </span>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </TabsContent>
-
-        {/* ─── Sponsors Tab ─────────────────────────────────────── */}
-        <TabsContent value="sponsors" className="space-y-6">
-          {(() => {
-            const totalContributions = sponsors.reduce(
-              (sum, s) => sum + (s.contributionAmount ?? 0),
-              0,
-            );
-            return (
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-medium">Competition Sponsors</h3>
-                  <p className="text-xs text-muted-foreground">
-                    {sponsors.length} sponsor{sponsors.length !== 1 ? "s" : ""} &middot; PKR{" "}
-                    {totalContributions.toLocaleString()} total contributions
-                  </p>
-                </div>
-              </div>
-            );
-          })()}
-
-          {sponsors.length === 0 ? (
-            <Card className="border-border/50 shadow-sm">
-              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500/20 to-blue-500/5">
-                  <Building2 className="h-7 w-7 text-blue-500" />
-                </div>
-                <p className="mt-4 text-sm font-medium">No sponsors yet</p>
-                <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-                  Sponsors added to this competition will appear here.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {sponsors.map((sponsor) => {
-                const tier = TIER_CONFIG[sponsor.sponsorTier] ?? TIER_CONFIG.partner;
-                return (
-                  <Card
-                    key={sponsor.id}
-                    className="border-border/50 shadow-md transition-all hover:border-primary/20 hover:shadow-sm"
-                  >
-                    <CardContent className="flex items-center gap-4 p-4">
-                      {/* Company icon */}
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 text-xs font-bold text-primary">
-                        {sponsor.companyName
-                          .split(" ")
-                          .map((w) => w[0])
-                          .join("")
-                          .slice(0, 2)
-                          .toUpperCase()}
-                      </div>
-
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="truncate text-sm font-semibold">
-                            {sponsor.companyName}
-                          </p>
-                          {sponsor.featured && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-400">
-                              <Star className="h-3 w-3" />
-                              Featured
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {sponsor.contributionTitle}
-                        </p>
-                      </div>
-
-                      {/* Tier badge */}
-                      <span
-                        className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${tier.bg} ${tier.color} border-current/20`}
-                      >
-                        {tier.label}
-                      </span>
-
-                      {/* Contribution details */}
-                      <div className="hidden items-center gap-4 text-xs sm:flex">
-                        <div className="text-center">
-                          <p className="font-semibold">
-                            {fmtContributionType(sponsor.contributionType)}
-                          </p>
-                          <p className="text-muted-foreground">Type</p>
-                        </div>
-                        {sponsor.contributionAmount != null && (
-                          <div className="text-center">
-                            <p className="font-bold text-primary">
-                              PKR {sponsor.contributionAmount.toLocaleString()}
-                            </p>
-                            <p className="text-muted-foreground">Amount</p>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </TabsContent>
-
-        {/* ─── Timeline Tab ──────────────────────────────────────── */}
-        <TabsContent value="timeline" className="space-y-6">
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-primary/5">
-                  <Calendar className="h-4 w-4 text-primary" />
-                </div>
-                Competition Timeline
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="relative space-y-0">
-                {timelineSteps.map((step, idx) => {
-                  const Icon = step.icon;
-                  const startDate = step.start ? new Date(step.start) : null;
-                  const endDate = step.end ? new Date(step.end) : null;
-                  const now = new Date();
-                  const isActive = startDate && (!endDate ? !isPast(startDate) : now >= startDate && now <= endDate);
-                  const isPastStep = endDate ? isPast(endDate) : startDate ? isPast(startDate) : false;
-                  const isLast = idx === timelineSteps.length - 1;
-
-                  return (
-                    <div key={step.label} className="relative flex gap-4 pb-8 last:pb-0">
-                      {/* Connector line */}
-                      {!isLast && (
-                        <div className="absolute left-[18px] top-10 h-full w-px bg-border" />
-                      )}
-
-                      {/* Icon */}
-                      <div
-                        className={`relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${
-                          isActive
-                            ? "border-primary/50 bg-primary/10 shadow-sm"
-                            : isPastStep
-                              ? "border-emerald-500/30 bg-emerald-500/10"
-                              : "border-border bg-muted/50"
-                        }`}
-                      >
-                        {isPastStep ? (
-                          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                        ) : (
-                          <Icon className={`h-4 w-4 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
-                        )}
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1 pt-1">
-                        <p className={`text-sm font-semibold ${isActive ? "text-primary" : ""}`}>
-                          {step.label}
-                          {isActive && (
-                            <span className="ml-2 inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                              Active
-                            </span>
-                          )}
-                        </p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          {step.start ? fmtDateTime(step.start) : "Not set"}
-                          {step.end && ` → ${fmtDateTime(step.end)}`}
-                        </p>
-                        {startDate && !isPastStep && !isActive && (
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            Starts {formatDistanceToNow(startDate, { addSuffix: true })}
-                          </p>
-                        )}
-                        {endDate && isActive && (
-                          <p className="mt-1 text-xs text-amber-500">
-                            Ends {formatDistanceToNow(endDate, { addSuffix: true })}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
     </div>
   );

@@ -19,6 +19,7 @@ import {
 import { Trophy, ShieldCheck, ShieldX, Globe, Lock } from "lucide-react";
 import { AdminCompetitionActions } from "./actions";
 import { GoLiveButton } from "@/components/competitions/go-live-button";
+import { HackathonManagementActions } from "@/components/competitions/hackathon-management-actions";
 import { CompetitionStatusFilter } from "./competition-status-filter";
 
 function formatDate(date: Date | null): string {
@@ -218,13 +219,19 @@ export default async function AdminCompetitionsPage({ searchParams }: PageProps)
                   <TableCell>{formatDate(comp.submissionEnd)}</TableCell>
                   <TableCell>{formatDate(comp.createdAt)}</TableCell>
                   <TableCell className="text-right">
-                    {comp.status === "pending_review" ? (
-                      <AdminCompetitionActions competitionId={comp.id} />
-                    ) : comp.status === "approved" ? (
-                      <GoLiveButton competitionId={comp.id} size="sm" />
-                    ) : (
-                      <span className="text-xs text-muted-foreground">-</span>
-                    )}
+                    <div className="flex flex-col items-end gap-2">
+                      {comp.status === "pending_review" && (
+                        <AdminCompetitionActions competitionId={comp.id} />
+                      )}
+                      {comp.status === "approved" && (
+                        <GoLiveButton competitionId={comp.id} size="sm" />
+                      )}
+                      <HackathonManagementActions
+                        competitionId={comp.id}
+                        competitionSlug={comp.slug ?? ""}
+                        status={comp.status}
+                      />
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

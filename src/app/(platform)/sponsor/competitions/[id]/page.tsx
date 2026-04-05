@@ -10,9 +10,8 @@ import {
   users,
   judgeAssignments,
   judgeEvaluations,
-  competitionSponsors,
 } from "@/lib/db/schema";
-import { eq, and, count, sql, inArray, asc } from "drizzle-orm";
+import { eq, count, sql } from "drizzle-orm";
 import { resolveOnboardingUser } from "@/lib/auth/resolve-onboarding-user";
 import { CompetitionDetailTabs } from "@/components/sponsor/competition-detail-tabs";
 
@@ -146,21 +145,8 @@ export default async function SponsorCompetitionDetailPage({
     }
   }
 
-  // Fetch sponsors
-  const sponsors = await db
-    .select()
-    .from(competitionSponsors)
-    .where(eq(competitionSponsors.competitionId, id))
-    .orderBy(asc(competitionSponsors.displayOrder));
-
   // Serialize dates for client component
   const serialize = (d: Date | null) => (d ? d.toISOString() : null);
-
-  const serializedSponsors = sponsors.map((s) => ({
-    ...s,
-    createdAt: s.createdAt?.toISOString() ?? null,
-    updatedAt: s.updatedAt?.toISOString() ?? null,
-  }));
 
   return (
     <CompetitionDetailTabs
@@ -201,7 +187,6 @@ export default async function SponsorCompetitionDetailPage({
       statusCounts={statusCounts}
       totalTeams={teamCountResult?.count ?? 0}
       totalParticipants={participantResult?.count ?? 0}
-      sponsors={serializedSponsors}
     />
   );
 }
