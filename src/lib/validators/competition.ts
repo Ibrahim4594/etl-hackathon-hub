@@ -83,7 +83,9 @@ export const competitionCreateSchema = z.object({
   tagline: z.string().max(150).optional(),
   description: z.string().min(10, "Description must be at least 10 characters"),
   category: z.string().optional(),
-  tags: z.array(z.string()).default([]),
+  tags: z.array(
+    z.string().trim().max(30, "Each tag must be 30 characters or less").transform(s => s.toLowerCase())
+  ).max(10, "Maximum 10 tags allowed").default([]),
   coverImageUrl: z.string().optional(),
   logoUrl: z.string().optional(),
   challengeStatement: z.string().optional(),

@@ -18,7 +18,7 @@ async function Navbar() {
     const [u] = await db.select({ role: users.role }).from(users).where(eq(users.clerkId, userId));
     userRole = u?.role ?? undefined;
   }
-  const dashboardHref = userRole ? `/${userRole}/dashboard` : "/student/dashboard";
+  const dashboardHref = userRole ? `/${userRole}/dashboard` : "/onboarding";
 
   return (
     <nav className="fixed top-0 w-full bg-background/80 backdrop-blur-xl border-b border-border/50 z-50">
@@ -83,7 +83,9 @@ async function Navbar() {
             ) : (
               <>
                 <Link href={dashboardHref}>
-                  <Button variant="ghost" className="h-9 px-4 py-2 text-sm font-medium">Dashboard</Button>
+                  <Button variant="ghost" className="h-9 px-4 py-2 text-sm font-medium">
+                    {userRole ? "Dashboard" : "Complete Profile"}
+                  </Button>
                 </Link>
                 <UserButton />
               </>

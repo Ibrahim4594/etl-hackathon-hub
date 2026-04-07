@@ -8,7 +8,7 @@ import {
   organizations,
   competitionSponsors,
 } from "@/lib/db/schema";
-import { eq, desc, sql, and, inArray, asc, or, notInArray } from "drizzle-orm";
+import { eq, desc, sql, and, inArray, asc, notInArray } from "drizzle-orm";
 import { resolveOnboardingUser } from "@/lib/auth/resolve-onboarding-user";
 import { serverAuth } from "@/lib/auth/server-auth";
 import Link from "next/link";
@@ -175,13 +175,11 @@ export default async function StudentDashboardPage() {
     }
   }
 
-  // Discover: active competitions this student hasn't joined
+  // Discover: active competitions with future deadlines this student hasn't joined
   const joinedCompIds = [...new Set(memberships.map((m) => m.competitionId))];
   const discoverConditions = [
-    or(
-      eq(competitions.status, "active"),
-      eq(competitions.status, "judging")
-    )!,
+    eq(competitions.status, "active"),
+    sql`(${competitions.submissionEnd} IS NULL OR ${competitions.submissionEnd} > now())`,
   ];
   if (joinedCompIds.length > 0) {
     discoverConditions.push(
@@ -218,6 +216,17 @@ export default async function StudentDashboardPage() {
       m.competitionStatus === "approved" ||
       m.competitionStatus === "judging"
   );
+  const pastCompetitions = [
+    ...new Map(
+      memberships
+        .filter(
+          (m) =>
+            m.competitionStatus === "completed" ||
+            m.competitionStatus === "cancelled"
+        )
+        .map((m) => [m.competitionId, m])
+    ).values(),
+  ];
   const uniqueTeams = [
     ...new Map(memberships.map((m) => [m.teamId, m])).values(),
   ];
@@ -359,21 +368,34 @@ export default async function StudentDashboardPage() {
       </div>
 
       {/* ── DISCOVER COMPETITIONS ── */}
-      {discoverCompetitions.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-primary/5">
-                <Zap className="h-4 w-4 text-primary" />
-              </div>
-              <h2 className="text-base font-semibold">Discover Competitions</h2>
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-primary/5">
+              <Zap className="h-4 w-4 text-primary" />
             </div>
+            <h2 className="text-base font-semibold">Discover Competitions</h2>
+          </div>
+          <Link href="/competitions">
+            <Button variant="ghost" size="sm" className="gap-1 text-xs text-primary">
+              Browse all <ArrowRight className="h-3 w-3" />
+            </Button>
+          </Link>
+        </div>
+        {discoverCompetitions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/50 bg-muted/20 py-12 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-3">
+              <Zap className="h-6 w-6 text-primary" />
+            </div>
+            <p className="text-sm font-medium text-foreground mb-1">No active competitions right now</p>
+            <p className="text-xs text-muted-foreground mb-4">Check back soon — new hackathons are added regularly.</p>
             <Link href="/competitions">
-              <Button variant="ghost" size="sm" className="gap-1 text-xs text-primary">
-                Browse all <ArrowRight className="h-3 w-3" />
+              <Button size="sm" variant="outline" className="rounded-full gap-1.5">
+                Browse Competitions <ArrowRight className="h-3.5 w-3.5" />
               </Button>
             </Link>
           </div>
+        ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {discoverCompetitions.map((comp) => (
               <CompetitionCard
@@ -395,8 +417,8 @@ export default async function StudentDashboardPage() {
               />
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       <div className="grid gap-5 lg:grid-cols-3">
         {/* ── LEFT COLUMN (2/3) ── */}
@@ -765,6 +787,54 @@ export default async function StudentDashboardPage() {
           </Link>
         ))}
       </div>
+
+      {/* ── PAST COMPETITIONS ── */}
+      {pastCompetitions.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-muted/50 to-muted/20 border border-border/30">
+              <Trophy className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <h2 className="text-base font-semibold text-muted-foreground">Past Competitions</h2>
+            <span className="text-xs text-muted-foreground/60 ml-auto">{pastCompetitions.length} ended</span>
+          </div>
+          <div className="space-y-2 opacity-80">
+            {pastCompetitions.map((m) => {
+              const subStatus = submissionStatusMap.get(m.competitionId);
+              return (
+                <div
+                  key={m.competitionId}
+                  className="flex items-center justify-between rounded-xl border border-border/40 bg-muted/20 px-4 py-3 gap-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <Link
+                      href={`/competitions/${m.competitionSlug}`}
+                      className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors truncate block"
+                    >
+                      {m.competitionTitle}
+                    </Link>
+                    <p className="text-xs text-muted-foreground/70 mt-0.5">by {m.orgName} · Team: {m.teamName}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span
+                      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${COMPETITION_STATUS_COLORS[m.competitionStatus] ?? "border-border bg-muted text-muted-foreground"}`}
+                    >
+                      {formatStatus(m.competitionStatus)}
+                    </span>
+                    {subStatus && (
+                      <span
+                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${SUBMISSION_STATUS_COLORS[subStatus] ?? "border-border bg-muted text-muted-foreground"}`}
+                      >
+                        {formatStatus(subStatus)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

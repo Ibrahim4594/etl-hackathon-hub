@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +18,15 @@ import {
 import { Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+const teamSchema = z.object({
+  name: z
+    .string()
+    .min(2, "Team name must be at least 2 characters")
+    .max(50, "Team name must be 50 characters or less"),
+});
+
+type TeamFormValues = z.infer<typeof teamSchema>;
+
 interface TeamCreateDialogProps {
   competitionId: string;
   onCreated?: (team: { id: string; name: string; inviteCode: string }) => void;
@@ -22,18 +34,24 @@ interface TeamCreateDialogProps {
 
 export function TeamCreateDialog({ competitionId, onCreated }: TeamCreateDialogProps) {
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleCreate = async () => {
-    if (!name.trim()) return;
-    setLoading(true);
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<TeamFormValues>({
+    resolver: zodResolver(teamSchema),
+  });
 
+  const onSubmit = async (values: TeamFormValues) => {
+    setLoading(true);
     try {
       const res = await fetch("/api/teams", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ competitionId, name }),
+        body: JSON.stringify({ competitionId, name: values.name }),
       });
 
       const data = await res.json();
@@ -42,7 +60,7 @@ export function TeamCreateDialog({ competitionId, onCreated }: TeamCreateDialogP
       toast.success("Team created! Share the invite code with your teammates.");
       onCreated?.(data.team);
       setOpen(false);
-      setName("");
+      reset();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to create team");
     } finally {
@@ -51,7 +69,7 @@ export function TeamCreateDialog({ competitionId, onCreated }: TeamCreateDialogP
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
       <DialogTrigger>
         <Button size="sm">
           <Plus className="mr-1 h-4 w-4" />
@@ -65,21 +83,23 @@ export function TeamCreateDialog({ competitionId, onCreated }: TeamCreateDialogP
             Create a team for this competition. You&apos;ll get an invite code to share.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 pt-2">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-2">
           <div className="space-y-2">
             <Label htmlFor="team-name">Team Name</Label>
             <Input
               id="team-name"
               placeholder="e.g. Code Crushers"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              {...register("name")}
             />
+            {errors.name && (
+              <p className="text-xs text-destructive mt-1">{errors.name.message}</p>
+            )}
           </div>
-          <Button onClick={handleCreate} disabled={!name.trim() || loading} className="w-full">
+          <Button type="submit" disabled={loading} className="w-full">
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Create Team
           </Button>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

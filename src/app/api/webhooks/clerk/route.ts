@@ -53,13 +53,25 @@ export async function POST(req: Request) {
 
   switch (type) {
     case "user.created": {
-      await db.insert(users).values({
-        clerkId: data.id,
-        email: data.email_addresses[0]?.email_address ?? "",
-        firstName: data.first_name,
-        lastName: data.last_name,
-        imageUrl: data.image_url,
-      });
+      await db
+        .insert(users)
+        .values({
+          clerkId: data.id,
+          email: data.email_addresses[0]?.email_address ?? "",
+          firstName: data.first_name,
+          lastName: data.last_name,
+          imageUrl: data.image_url,
+        })
+        .onConflictDoUpdate({
+          target: users.clerkId,
+          set: {
+            email: data.email_addresses[0]?.email_address ?? "",
+            firstName: data.first_name,
+            lastName: data.last_name,
+            imageUrl: data.image_url,
+            updatedAt: new Date(),
+          },
+        });
       break;
     }
 

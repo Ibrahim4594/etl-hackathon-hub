@@ -44,9 +44,21 @@ export async function resolveOnboardingUser(clerkId: string) {
   if (byEmail) {
     await db
       .update(users)
-      .set({ clerkId, updatedAt: new Date() })
+      .set({
+        clerkId,
+        firstName: clerkUser.firstName,
+        lastName: clerkUser.lastName,
+        imageUrl: clerkUser.imageUrl,
+        updatedAt: new Date(),
+      })
       .where(eq(users.id, byEmail.id));
-    return { ...byEmail, clerkId };
+    return {
+      ...byEmail,
+      clerkId,
+      firstName: clerkUser.firstName,
+      lastName: clerkUser.lastName,
+      imageUrl: clerkUser.imageUrl,
+    };
   }
 
   // 4. Create new user

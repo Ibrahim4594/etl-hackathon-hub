@@ -13,6 +13,7 @@ interface Props {
     category?: string;
     sort?: string;
     status?: string;
+    tag?: string;
     page?: string;
   }>;
 }
@@ -29,13 +30,15 @@ export default async function CompetitionsMarketplace({
   type HackathonStatus = "draft" | "pending_review" | "approved" | "active" | "judging" | "completed" | "cancelled";
   const validStatuses: HackathonStatus[] = ["active", "judging", "completed"];
   const statusFilter =
-    params.status && params.status !== "all" && validStatuses.includes(params.status as HackathonStatus)
-      ? eq(competitions.status, params.status as HackathonStatus)
-      : or(
-          eq(competitions.status, "active"),
-          eq(competitions.status, "judging"),
-          eq(competitions.status, "completed")
-        );
+    params.status === "ended"
+      ? or(eq(competitions.status, "judging"), eq(competitions.status, "completed"))
+      : params.status && params.status !== "all" && validStatuses.includes(params.status as HackathonStatus)
+        ? eq(competitions.status, params.status as HackathonStatus)
+        : or(
+            eq(competitions.status, "active"),
+            eq(competitions.status, "judging"),
+            eq(competitions.status, "completed")
+          );
 
   const conditions = [statusFilter!];
 
@@ -49,6 +52,11 @@ export default async function CompetitionsMarketplace({
   }
   if (params.category) {
     conditions.push(eq(competitions.category, params.category));
+  }
+  if (params.tag) {
+    conditions.push(
+      sql`${competitions.tags} @> ${JSON.stringify([params.tag])}::jsonb`
+    );
   }
 
   const orderBy =
@@ -120,6 +128,23 @@ export default async function CompetitionsMarketplace({
   const totalPrize = Number(stats?.totalPrize ?? 0);
   const totalOrgs = Number(orgStats?.count ?? 0);
 
+  // Fetch popular tags for the filter bar
+  let popularTags: string[] = [];
+  try {
+    const tagRows = await db.execute(
+      sql`SELECT tag, COUNT(*) AS cnt
+          FROM competitions, jsonb_array_elements_text(tags) AS tag
+          WHERE status IN ('active', 'judging', 'completed')
+            AND tags IS NOT NULL
+          GROUP BY tag
+          ORDER BY cnt DESC
+          LIMIT 15`
+    );
+    popularTags = (tagRows as unknown as Array<{ tag: string }>).map((r) => r.tag).filter(Boolean);
+  } catch {
+    popularTags = [];
+  }
+
   return (
     <div className="min-h-screen pt-10">
       {/* ── Hero Banner ── */}
@@ -177,7 +202,7 @@ export default async function CompetitionsMarketplace({
 
       {/* ── Main Content ── */}
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <CompetitionFilters />
+        <CompetitionFilters popularTags={popularTags} />
 
         {results.length === 0 ? (
           /* ── Empty State ── */

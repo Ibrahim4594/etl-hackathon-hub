@@ -47,6 +47,7 @@ import { GsapScrollReveal } from "@/components/motion/gsap-scroll-reveal";
 import { GsapStaggerReveal } from "@/components/motion/gsap-stagger-reveal";
 import { TestimonialsColumn, type Testimonial } from "@/components/ui/testimonials-columns";
 import { IconBox } from "@/components/shared/icon-box";
+import { ScrollSnapActivator } from "@/components/marketing/scroll-snap-activator";
 
 /* ─── Data ────────────────────────────────────────────────────────────── */
 
@@ -360,26 +361,27 @@ export default async function LandingPage() {
 
   const studentHref = !userId
     ? "/sign-up"
-    : role === "student"
-      ? "/student/dashboard"
-      : role
-        ? "/sign-up"
-        : "/onboarding";
+    : !role
+      ? "/onboarding"
+      : role === "student"
+        ? "/student/dashboard"
+        : `/${role}/dashboard`;
 
   const sponsorHref = !userId
     ? "/sign-up"
-    : role === "sponsor"
-      ? "/sponsor/competitions/new"
-      : role
-        ? "/sign-up"
-        : "/onboarding";
+    : !role
+      ? "/onboarding"
+      : role === "sponsor"
+        ? "/sponsor/competitions/new"
+        : `/${role}/dashboard`;
 
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
+      <ScrollSnapActivator />
       <BackgroundOrbs />
 
       {/* ───────────────── HERO ───────────────── */}
-      <section className="relative pt-32 md:pt-40 pb-24 grain overflow-hidden">
+      <section className="relative snap-start min-h-screen pt-32 md:pt-40 pb-24 grain overflow-hidden">
         <div className="absolute inset-0 hero-animated-gradient" />
         <HeroSparkAnimation />
         <Spotlight size={500} color="rgba(81, 236, 220, 0.06)" />
@@ -483,7 +485,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ───────────────── TRUSTED BY — MARQUEE ───────────────── */}
-      <section className="py-10 border-y border-border/30 overflow-hidden">
+      <section className="snap-start min-h-screen py-10 border-y border-border/30 overflow-hidden">
         <div className="max-w-7xl mx-auto px-6">
           <p className="text-[11px] font-medium text-muted-foreground text-center mb-5 uppercase tracking-[0.2em]">
             Trusted by universities across Pakistan
@@ -509,7 +511,7 @@ export default async function LandingPage() {
 
       {/* ───────────────── LIVE COMPETITIONS ───────────────── */}
       {featuredCompetitions.length > 0 && (
-        <section className="py-20 md:py-28">
+        <section className="snap-start min-h-screen py-20 md:py-28">
           <div className="max-w-7xl mx-auto px-6">
             <FadeIn>
               <div className="flex items-end justify-between mb-12">
@@ -573,7 +575,7 @@ export default async function LandingPage() {
 
       {/* ───────────────── HOW IT WORKS ───────────────── */}
       <GsapScrollReveal>
-      <section className="py-24 md:py-32 bg-gradient-to-b from-muted/30 via-muted/50 to-muted/30">
+      <section className="snap-start min-h-screen py-24 md:py-32 bg-gradient-to-b from-muted/30 via-muted/50 to-muted/30">
         <div className="max-w-7xl mx-auto px-6">
           <FadeIn>
             <div className="text-center mb-16 md:mb-20">
@@ -650,7 +652,7 @@ export default async function LandingPage() {
       {/* ───────────────── PLATFORM FEATURES — GLOW CARDS ───────────────── */}
       <section
         id="features"
-        className="relative py-24 md:py-32 bg-background overflow-hidden"
+        className="snap-start min-h-screen relative py-24 md:py-32 bg-background overflow-hidden"
       >
         <div className="absolute -right-32 top-20 h-72 w-72 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
         <div className="max-w-7xl mx-auto px-6">
@@ -694,7 +696,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ───────────────── FOR STUDENTS ───────────────── */}
-      <section className="py-24 md:py-32 bg-gradient-to-b from-muted/30 via-muted/50 to-muted/30">
+      <section className="snap-start min-h-screen py-24 md:py-32 bg-gradient-to-b from-muted/30 via-muted/50 to-muted/30">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-10 items-center">
             {/* Left — Text */}
@@ -815,7 +817,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ───────────────── FOR SPONSORS ───────────────── */}
-      <section id="sponsors" className="py-24 md:py-32 bg-background">
+      <section id="sponsors" className="snap-start min-h-screen py-24 md:py-32 bg-background">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-10 items-center">
             {/* Left — Mock Sponsor Dashboard */}
@@ -934,7 +936,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ───────────────── AI JUDGE SHOWCASE ───────────────── */}
-      <section className="py-24 md:py-32 bg-gradient-to-b from-muted/30 via-muted/50 to-muted/30">
+      <section className="snap-start min-h-screen py-24 md:py-32 bg-gradient-to-b from-muted/30 via-muted/50 to-muted/30">
         <div className="max-w-7xl mx-auto px-6">
           <FadeIn>
             <div className="text-center mb-16 md:mb-20">
@@ -1034,7 +1036,7 @@ export default async function LandingPage() {
 
       {/* ───────────────── TESTIMONIALS — SCROLLING COLUMNS ───────────────── */}
       <GsapScrollReveal>
-        <section className="py-24 md:py-32 bg-background">
+        <section className="snap-start min-h-screen py-24 md:py-32 bg-background">
           <div className="max-w-7xl mx-auto px-6">
             <div className="text-center mb-16 md:mb-20">
               <h2 className="text-4xl md:text-6xl font-bold leading-tight tracking-tight mb-6 text-foreground">
@@ -1066,7 +1068,7 @@ export default async function LandingPage() {
       <GsapScrollReveal>
       <section
         id="roadmap"
-        className="py-24 md:py-32 bg-gradient-to-b from-muted/30 via-muted/50 to-muted/30"
+        className="snap-start min-h-screen py-24 md:py-32 bg-gradient-to-b from-muted/30 via-muted/50 to-muted/30"
       >
         <div className="max-w-7xl mx-auto px-6">
           <FadeIn>
@@ -1175,7 +1177,7 @@ export default async function LandingPage() {
 
       {/* ───────────────── FINAL CTA ───────────────── */}
       <GsapScrollReveal y={30}>
-      <section className="relative py-24 md:py-32 bg-gradient-to-b from-background via-primary/80 to-primary overflow-hidden grain">
+      <section className="snap-start min-h-screen relative py-24 md:py-32 bg-gradient-to-b from-background via-primary/80 to-primary overflow-hidden grain">
         <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-background to-transparent pointer-events-none" />
         <div className="absolute -right-40 top-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-primary/30 blur-3xl pointer-events-none" />
         <div className="absolute -left-20 bottom-10 h-72 w-72 rounded-full bg-primary/20 blur-3xl pointer-events-none" />

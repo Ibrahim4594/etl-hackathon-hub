@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, X, SlidersHorizontal } from "lucide-react";
+import { Search, X, SlidersHorizontal, Tag } from "lucide-react";
 
 const CATEGORIES = [
   "AI/ML",
@@ -30,6 +30,7 @@ const STATUSES = [
   { value: "", label: "All Statuses" },
   { value: "active", label: "Open" },
   { value: "judging", label: "Judging" },
+  { value: "ended", label: "Ended" },
   { value: "completed", label: "Completed" },
 ];
 
@@ -39,16 +40,21 @@ const SORTS = [
   { value: "prize", label: "Highest Prize" },
 ];
 
-export function CompetitionFilters() {
+interface CompetitionFiltersProps {
+  popularTags?: string[];
+}
+
+export function CompetitionFilters({ popularTags = [] }: CompetitionFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentSearch = searchParams.get("search") || "";
   const currentCategory = searchParams.get("category") || "";
   const currentSort = searchParams.get("sort") || "";
   const currentStatus = searchParams.get("status") || "";
+  const currentTag = searchParams.get("tag") || "";
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const hasFilters = currentSearch || currentCategory || currentSort || currentStatus;
+  const hasFilters = currentSearch || currentCategory || currentSort || currentStatus || currentTag;
 
   function updateParams(key: string, value: string | null) {
     const params = new URLSearchParams(searchParams.toString());
@@ -122,6 +128,37 @@ export function CompetitionFilters() {
         ))}
       </div>
 
+      {/* Tag filter pills */}
+      {popularTags.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Tag className="h-3.5 w-3.5" />
+            <span>Tags:</span>
+          </div>
+          {popularTags.map((tag) => (
+            <button
+              key={tag}
+              onClick={() => updateParams("tag", currentTag === tag ? "" : tag)}
+              className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-all ${
+                currentTag === tag
+                  ? "bg-primary/15 border border-primary/40 text-primary shadow-sm"
+                  : "border border-dashed border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-primary"
+              }`}
+            >
+              {tag}
+            </button>
+          ))}
+          {currentTag && !popularTags.includes(currentTag) && (
+            <button
+              onClick={() => updateParams("tag", "")}
+              className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/15 px-3 py-1 text-xs font-medium text-primary"
+            >
+              {currentTag} <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Sort & Status filters row */}
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -176,3 +213,4 @@ export function CompetitionFilters() {
     </div>
   );
 }
+

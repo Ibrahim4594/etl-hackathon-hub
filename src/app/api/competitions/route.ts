@@ -1,7 +1,7 @@
 import { serverAuth } from "@/lib/auth/server-auth";
 import { db } from "@/lib/db";
 import { competitions, organizations, users, competitionSponsors } from "@/lib/db/schema";
-import { eq, and, desc, asc, ilike, sql } from "drizzle-orm";
+import { eq, and, or, desc, asc, ilike, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { competitionCreateSchema } from "@/lib/validators/competition";
 
@@ -26,13 +26,39 @@ export async function GET(req: Request) {
 
     const search = searchParams.get("search") || "";
     const category = searchParams.get("category") || "";
+    const status = searchParams.get("status") || "active";
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") || "12", 10)));
     const sort = searchParams.get("sort") || "newest";
     const offset = (page - 1) * limit;
 
+    // Build status condition
+    let statusCondition;
+    if (status === "ended") {
+      statusCondition = or(
+        eq(competitions.status, "completed"),
+        eq(competitions.status, "judging"),
+        and(
+          eq(competitions.status, "active"),
+          sql`${competitions.submissionEnd} < now()`
+        )
+      )!;
+    } else if (status === "all") {
+      statusCondition = or(
+        eq(competitions.status, "active"),
+        eq(competitions.status, "judging"),
+        eq(competitions.status, "completed")
+      )!;
+    } else {
+      // default: active with future deadline
+      statusCondition = and(
+        eq(competitions.status, "active"),
+        sql`(${competitions.submissionEnd} IS NULL OR ${competitions.submissionEnd} > now())`
+      )!;
+    }
+
     const conditions = [
-      eq(competitions.status, "active"),
+      statusCondition,
       eq(competitions.visibility, "public"),
     ];
 

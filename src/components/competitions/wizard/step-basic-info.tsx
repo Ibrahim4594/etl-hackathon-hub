@@ -14,9 +14,12 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Lightbulb, X, Globe, Lock, RefreshCw, Copy } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+
+const MAX_TAGS = 10;
+const MAX_TAG_LENGTH = 30;
 
 const CATEGORIES = [
   "AI/ML",
@@ -32,18 +35,18 @@ const CATEGORIES = [
 ] as const;
 
 const SUGGESTED_TAGS = [
-  "Beginner Friendly",
-  "Advanced",
-  "Open Source",
-  "Sustainability",
-  "Pakistan",
-  "Women in Tech",
-  "University",
-  "Corporate",
-  "Solo Allowed",
-  "Cash Prizes",
-  "Remote",
-  "In Person",
+  "beginner friendly",
+  "advanced",
+  "open source",
+  "sustainability",
+  "pakistan",
+  "women in tech",
+  "university",
+  "corporate",
+  "solo allowed",
+  "cash prizes",
+  "remote",
+  "in person",
 ];
 
 function generateAccessCode(): string {
@@ -58,23 +61,76 @@ function generateAccessCode(): string {
 export function StepBasicInfo() {
   const { formData, updateFormData } = useCompetitionForm();
   const [tagInput, setTagInput] = useState("");
+  const [dbTags, setDbTags] = useState<string[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [tagError, setTagError] = useState<string | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const addTag = (tag: string) => {
-    const trimmed = tag.trim();
-    if (trimmed && !formData.tags.includes(trimmed)) {
-      updateFormData({ tags: [...formData.tags, trimmed] });
+  useEffect(() => {
+    fetch("/api/competitions/tags")
+      .then((r) => r.json())
+      .then((data) => setDbTags(data.tags ?? []))
+      .catch(() => {});
+  }, []);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node) &&
+        inputRef.current &&
+        !inputRef.current.contains(e.target as Node)
+      ) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const allSuggestions = Array.from(new Set([...SUGGESTED_TAGS, ...dbTags])).sort();
+
+  const filteredSuggestions = tagInput.trim()
+    ? allSuggestions.filter(
+        (t) =>
+          t.toLowerCase().includes(tagInput.toLowerCase()) &&
+          !formData.tags.includes(t.toLowerCase())
+      )
+    : allSuggestions.filter((t) => !formData.tags.includes(t.toLowerCase())).slice(0, 8);
+
+  const addTag = (raw: string) => {
+    const tag = raw.trim().toLowerCase();
+    if (!tag) return;
+    if (tag.length > MAX_TAG_LENGTH) {
+      setTagError(`Tag must be ${MAX_TAG_LENGTH} characters or less`);
+      return;
+    }
+    if (formData.tags.length >= MAX_TAGS) {
+      setTagError(`Maximum ${MAX_TAGS} tags allowed`);
+      return;
+    }
+    if (!formData.tags.includes(tag)) {
+      updateFormData({ tags: [...formData.tags, tag] });
     }
     setTagInput("");
+    setTagError(null);
+    setShowDropdown(false);
   };
 
   const removeTag = (tag: string) => {
     updateFormData({ tags: formData.tags.filter((t) => t !== tag) });
+    setTagError(null);
   };
 
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
       addTag(tagInput);
+    }
+    if (e.key === "Escape") {
+      setShowDropdown(false);
     }
   };
 
@@ -162,14 +218,63 @@ export function StepBasicInfo() {
 
         {/* Tags */}
         <div className="space-y-2">
-          <Label htmlFor="tags">Tags</Label>
-          <Input
-            id="tags"
-            placeholder="Type a tag and press Enter"
-            value={tagInput}
-            onChange={(e) => setTagInput(e.target.value)}
-            onKeyDown={handleTagKeyDown}
-          />
+          <Label htmlFor="tags">
+            Tags{" "}
+            <span className="text-xs font-normal text-muted-foreground">
+              ({formData.tags.length}/{MAX_TAGS})
+            </span>
+          </Label>
+
+          {/* Input + dropdown wrapper */}
+          <div className="relative">
+            <Input
+              ref={inputRef}
+              id="tags"
+              placeholder={
+                formData.tags.length >= MAX_TAGS
+                  ? `Maximum ${MAX_TAGS} tags reached`
+                  : "Type a tag and press Enter, or pick from suggestions"
+              }
+              value={tagInput}
+              disabled={formData.tags.length >= MAX_TAGS}
+              onChange={(e) => {
+                setTagInput(e.target.value);
+                setTagError(null);
+                setShowDropdown(true);
+              }}
+              onFocus={() => setShowDropdown(true)}
+              onKeyDown={handleTagKeyDown}
+              autoComplete="off"
+            />
+
+            {/* Autocomplete dropdown */}
+            {showDropdown && filteredSuggestions.length > 0 && (
+              <div
+                ref={dropdownRef}
+                className="absolute z-50 mt-1 w-full rounded-xl border border-border bg-card shadow-lg overflow-hidden"
+              >
+                <div className="max-h-44 overflow-y-auto py-1">
+                  {filteredSuggestions.map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        addTag(tag);
+                      }}
+                      className="w-full px-3 py-2 text-left text-sm hover:bg-muted/60 transition-colors"
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {tagError && (
+            <p className="text-xs text-destructive mt-1">{tagError}</p>
+          )}
 
           {/* Selected tags */}
           {formData.tags.length > 0 && (
@@ -189,22 +294,24 @@ export function StepBasicInfo() {
             </div>
           )}
 
-          {/* Suggested tags */}
-          <div className="space-y-1.5 pt-1">
-            <p className="text-xs text-muted-foreground">Suggested:</p>
-            <div className="flex flex-wrap gap-1.5">
-              {SUGGESTED_TAGS.filter((t) => !formData.tags.includes(t)).map((tag) => (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() => addTag(tag)}
-                  className="inline-flex h-5 items-center rounded-full border border-dashed border-muted-foreground/30 px-2 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-                >
-                  + {tag}
-                </button>
-              ))}
+          {/* Static suggestions (when input is empty) */}
+          {!tagInput && formData.tags.length < MAX_TAGS && (
+            <div className="space-y-1.5 pt-1">
+              <p className="text-xs text-muted-foreground">Suggested:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {SUGGESTED_TAGS.filter((t) => !formData.tags.includes(t)).slice(0, 8).map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => addTag(tag)}
+                    className="inline-flex h-5 items-center rounded-full border border-dashed border-muted-foreground/30 px-2 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                  >
+                    + {tag}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Visibility */}
