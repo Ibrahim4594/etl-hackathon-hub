@@ -1,5 +1,6 @@
 import { pgTable, uuid, text, timestamp, boolean } from "drizzle-orm/pg-core";
 import { competitions } from "./competitions";
+import { users } from "./users";
 
 export const judgeInvitations = pgTable("judge_invitations", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -7,7 +8,7 @@ export const judgeInvitations = pgTable("judge_invitations", {
   judgeName: text("judge_name").notNull(),
   judgeEmail: text("judge_email").notNull(),
   expertise: text("expertise"),
-  invitedBy: uuid("invited_by").notNull(),
+  invitedBy: uuid("invited_by").references(() => users.id, { onDelete: "set null" }),
   accepted: boolean("accepted").default(false).notNull(),
   acceptedAt: timestamp("accepted_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

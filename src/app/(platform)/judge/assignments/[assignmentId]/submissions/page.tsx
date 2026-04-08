@@ -82,7 +82,7 @@ export default async function AssignmentSubmissionsPage({
     <div className="space-y-8">
       <div className="flex items-center gap-3">
         <Link href="/judge/assignments">
-          <Button variant="ghost" size="icon" className="h-9 w-9">
+          <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="Go back">
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>

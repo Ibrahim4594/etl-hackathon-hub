@@ -6,7 +6,7 @@ import { hackathonStatusEnum, competitionVisibilityEnum } from "./enums";
 export const competitions = pgTable("competitions", {
   id: uuid("id").defaultRandom().primaryKey(),
   organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
-  createdBy: uuid("created_by").notNull().references(() => users.id),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
 
   // Basic info
   title: text("title").notNull(),

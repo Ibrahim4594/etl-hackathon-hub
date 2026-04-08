@@ -49,27 +49,41 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: `Role already assigned as "${dbUser.role}".` }, { status: 403 });
     }
 
-    // Use transaction so user role + org creation are atomic
-    const slug = slugify(data.orgName) + "-" + Date.now().toString(36);
+    // C10: Prevent duplicate org — check if user already owns one
+    const [existingOrg] = await db
+      .select({ id: organizations.id })
+      .from(organizations)
+      .where(eq(organizations.ownerId, dbUser.id));
 
-    await db.transaction(async (tx) => {
-      await tx
+    if (existingOrg) {
+      // User already has an org — just update their profile and mark onboarding complete
+      await db
         .update(users)
         .set({ role: "sponsor", onboardingComplete: true, updatedAt: new Date() })
         .where(eq(users.id, dbUser.id));
+    } else {
+      // Use transaction so user role + org creation are atomic
+      const slug = slugify(data.orgName) + "-" + Date.now().toString(36);
 
-      await tx.insert(organizations).values({
-        ownerId: dbUser.id,
-        name: data.orgName,
-        slug,
-        website: data.website || null,
-        description: data.description,
-        industry: data.industry,
-        contactPersonName: data.contactPersonName,
-        contactEmail: data.contactEmail,
-        contactPhone: data.contactPhone || null,
+      await db.transaction(async (tx) => {
+        await tx
+          .update(users)
+          .set({ role: "sponsor", onboardingComplete: true, updatedAt: new Date() })
+          .where(eq(users.id, dbUser.id));
+
+        await tx.insert(organizations).values({
+          ownerId: dbUser.id,
+          name: data.orgName,
+          slug,
+          website: data.website || null,
+          description: data.description,
+          industry: data.industry,
+          contactPersonName: data.contactPersonName,
+          contactEmail: data.contactEmail,
+          contactPhone: data.contactPhone || null,
+        });
       });
-    });
+    }
 
     // Update Clerk metadata
     try {

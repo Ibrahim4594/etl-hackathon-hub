@@ -51,10 +51,15 @@ export default clerkMiddleware(async (auth, req) => {
   // fetch the user record directly from Clerk so we always have the latest
   // publicMetadata.
   if (role === undefined) {
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
-    role = (user.publicMetadata as { role?: string })?.role;
-    onboardingComplete = (user.publicMetadata as { onboardingComplete?: boolean })?.onboardingComplete;
+    try {
+      const client = await clerkClient();
+      const user = await client.users.getUser(userId);
+      role = (user.publicMetadata as { role?: string })?.role;
+      onboardingComplete = (user.publicMetadata as { onboardingComplete?: boolean })?.onboardingComplete;
+    } catch {
+      // BAPI unavailable — fall through to role-check below; user will be
+      // redirected to onboarding if role is still undefined.
+    }
   }
 
   // If no role or onboarding not complete, redirect to onboarding

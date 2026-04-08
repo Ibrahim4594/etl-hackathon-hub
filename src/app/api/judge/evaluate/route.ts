@@ -211,7 +211,7 @@ export async function POST(req: Request) {
         .from(submissions)
         .where(eq(submissions.id, submissionId));
       if (submitter) {
-        triggerEvent(channels.participant(submitter.submittedBy), EVENTS.PARTICIPANT_SUBMISSION_STATUS, {
+        triggerEvent(channels.participant(submitter.submittedBy!), EVENTS.PARTICIPANT_SUBMISSION_STATUS, {
           competitionId: submission.competitionId,
           submissionId,
           status: "judged",

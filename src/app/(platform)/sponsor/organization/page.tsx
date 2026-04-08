@@ -1,4 +1,5 @@
 import { serverAuth } from "@/lib/auth/server-auth";
+import Image from "next/image";
 import { db } from "@/lib/db";
 import { organizations, competitions } from "@/lib/db/schema";
 import { eq, count } from "drizzle-orm";
@@ -69,9 +70,12 @@ export default async function SponsorOrganizationPage() {
           <div className="flex items-start gap-5">
             <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/60 shadow-md">
               {org.logoUrl ? (
-                <img
+                <Image
                   src={org.logoUrl}
                   alt={org.name}
+                  width={64}
+                  height={64}
+                  unoptimized
                   className="h-16 w-16 rounded-2xl object-cover"
                 />
               ) : (

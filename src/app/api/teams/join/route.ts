@@ -87,7 +87,7 @@ export async function POST(req: Request) {
 
     // Real-time: notify team lead about new member
     try {
-      triggerEvent(channels.participant(team.leadId), EVENTS.PARTICIPANT_TEAM_UPDATE, {
+      triggerEvent(channels.participant(team.leadId!), EVENTS.PARTICIPANT_TEAM_UPDATE, {
         teamId: team.id,
         teamName: team.name,
         competitionId: team.competitionId,

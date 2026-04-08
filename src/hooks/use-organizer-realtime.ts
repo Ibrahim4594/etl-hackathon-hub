@@ -133,22 +133,22 @@ export function useOrganizerRealtime(orgId: string, userId: string) {
 
   // Organizer-scoped channel
   useRealtimeChannel(channels.organizer(orgId), {
-    [EVENTS.ORG_SUBMISSION_RECEIVED]: (data: SubmissionReceivedPayload) =>
-      dispatch({ type: "SUBMISSION", payload: data }),
-    [EVENTS.ORG_TEAM_REGISTERED]: (data: TeamRegisteredPayload) =>
-      dispatch({ type: "REGISTRATION", payload: data }),
-    [EVENTS.ORG_JUDGE_SCORED]: (data: JudgeEvaluationCompletePayload) =>
-      dispatch({ type: "JUDGE_EVAL", payload: data }),
-    [EVENTS.ORG_STATS_UPDATED]: (data: OrgStatsUpdatedPayload) =>
-      dispatch({ type: "STATS", payload: data }),
-    [EVENTS.ORG_COMPETITION_STATUS]: (data: CompetitionStatusPayload) =>
-      dispatch({ type: "COMP_STATUS", payload: data }),
+    [EVENTS.ORG_SUBMISSION_RECEIVED]: (data: unknown) =>
+      dispatch({ type: "SUBMISSION", payload: data as SubmissionReceivedPayload }),
+    [EVENTS.ORG_TEAM_REGISTERED]: (data: unknown) =>
+      dispatch({ type: "REGISTRATION", payload: data as TeamRegisteredPayload }),
+    [EVENTS.ORG_JUDGE_SCORED]: (data: unknown) =>
+      dispatch({ type: "JUDGE_EVAL", payload: data as JudgeEvaluationCompletePayload }),
+    [EVENTS.ORG_STATS_UPDATED]: (data: unknown) =>
+      dispatch({ type: "STATS", payload: data as OrgStatsUpdatedPayload }),
+    [EVENTS.ORG_COMPETITION_STATUS]: (data: unknown) =>
+      dispatch({ type: "COMP_STATUS", payload: data as CompetitionStatusPayload }),
   });
 
   // User notification channel
   useRealtimeChannel(channels.user(userId), {
-    [EVENTS.NOTIFICATION]: (data: NotificationPayload) =>
-      dispatch({ type: "NOTIFICATION", payload: data }),
+    [EVENTS.NOTIFICATION]: (data: unknown) =>
+      dispatch({ type: "NOTIFICATION", payload: data as NotificationPayload }),
   });
 
   return state;

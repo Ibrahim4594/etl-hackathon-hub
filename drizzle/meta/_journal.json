@@ -22,6 +22,13 @@
       "when": 1775649517631,
       "tag": "0002_add_users_deleted_at",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1712534400000,
+      "tag": "0003_add_indexes",
+      "breakpoints": true
     }
   ]
 }

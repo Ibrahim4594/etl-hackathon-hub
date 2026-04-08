@@ -139,10 +139,9 @@ export async function POST(
 
     // Look up the competition creator for email + notification
     const creatorId = competition.createdBy;
-    const [creator] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, creatorId));
+    const [creator] = creatorId
+      ? await db.select().from(users).where(eq(users.id, creatorId))
+      : [];
 
     if (creator) {
       // Create in-app notification

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { sql } from "drizzle-orm";
+import { extractTagsFromRows } from "@/lib/db/tag-queries";
 
 export const revalidate = 300;
 
@@ -14,7 +15,7 @@ export async function GET() {
             AND jsonb_array_length(tags) > 0
           ORDER BY tag`
     );
-    const tags = (rows as unknown as Array<{ tag: string }>).map((r) => r.tag).filter(Boolean);
+    const tags = extractTagsFromRows(rows);
     return NextResponse.json({ tags });
   } catch {
     return NextResponse.json({ tags: [] });

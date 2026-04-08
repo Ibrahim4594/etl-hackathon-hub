@@ -3,6 +3,23 @@
  * Import from here instead of defining inline in each page.
  */
 
+/** Split-property config for badges that need individual color/bg/border/label access. */
+export const COMPETITION_STATUS_CONFIG: Record<string, {
+  color: string;
+  bg: string;
+  border: string;
+  label: string;
+  dot?: boolean;
+}> = {
+  draft: { color: "text-zinc-400", bg: "bg-zinc-500/10", border: "border-zinc-500/20", label: "Draft" },
+  pending_review: { color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20", label: "In Review" },
+  approved: { color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20", label: "Approved" },
+  active: { color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20", label: "Live", dot: true },
+  judging: { color: "text-purple-400", bg: "bg-purple-500/10", border: "border-purple-500/20", label: "Judging", dot: true },
+  completed: { color: "text-zinc-400", bg: "bg-zinc-500/10", border: "border-zinc-500/20", label: "Completed" },
+  cancelled: { color: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/20", label: "Cancelled" },
+};
+
 export const COMPETITION_STATUS_COLORS: Record<string, string> = {
   draft: "bg-zinc-500/10 text-zinc-500 border-zinc-500/20",
   pending_review: "bg-amber-500/10 text-amber-500 border-amber-500/20",

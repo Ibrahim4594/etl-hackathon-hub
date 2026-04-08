@@ -28,16 +28,7 @@ import { format, isPast, formatDistanceToNow } from "date-fns";
 import { HackathonManagementActions } from "@/components/competitions/hackathon-management-actions";
 import { PublishButton } from "@/components/competitions/publish-button";
 import { GoLiveButton } from "@/components/competitions/go-live-button";
-
-const STATUS_CONFIG: Record<string, { color: string; bg: string; border: string; label: string; dot?: boolean }> = {
-  draft: { color: "text-zinc-400", bg: "bg-zinc-500/10", border: "border-zinc-500/20", label: "Draft" },
-  pending_review: { color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20", label: "In Review" },
-  approved: { color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20", label: "Approved" },
-  active: { color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20", label: "Live", dot: true },
-  judging: { color: "text-purple-400", bg: "bg-purple-500/10", border: "border-purple-500/20", label: "Judging", dot: true },
-  completed: { color: "text-zinc-400", bg: "bg-zinc-500/10", border: "border-zinc-500/20", label: "Completed" },
-  cancelled: { color: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/20", label: "Cancelled" },
-};
+import { COMPETITION_STATUS_CONFIG } from "@/lib/constants/status-colors";
 
 function fmtPrize(v: number | null) {
   if (!v) return "PKR 0";
@@ -45,6 +36,8 @@ function fmtPrize(v: number | null) {
   if (v >= 1_000) return `PKR ${(v / 1_000).toFixed(0)}K`;
   return `PKR ${v.toLocaleString()}`;
 }
+
+export const revalidate = 60;
 
 export default async function SponsorCompetitionsPage() {
   const { userId } = await serverAuth();
@@ -133,7 +126,7 @@ export default async function SponsorCompetitionsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {sponsorCompetitions.map((comp) => {
-            const cfg = STATUS_CONFIG[comp.status] ?? STATUS_CONFIG.draft;
+            const cfg = COMPETITION_STATUS_CONFIG[comp.status] ?? COMPETITION_STATUS_CONFIG.draft;
             const subs = subCounts[comp.id] ?? 0;
             const tms = teamCounts[comp.id] ?? 0;
             const deadlineDate = comp.submissionEnd;

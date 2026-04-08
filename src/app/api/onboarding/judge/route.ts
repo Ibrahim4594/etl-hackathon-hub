@@ -47,7 +47,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Failed to resolve user. Please try again." }, { status: 500 });
     }
 
-    if (dbUser.onboardingComplete && dbUser.role && dbUser.role !== "judge") {
+    if (dbUser.role && dbUser.role !== "judge") {
       return NextResponse.json({ error: `Role already assigned as "${dbUser.role}".` }, { status: 403 });
     }
 

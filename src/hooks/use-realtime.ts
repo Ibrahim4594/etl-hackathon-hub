@@ -12,17 +12,20 @@ function getPusherClient(): PusherClient {
       process.env.NEXT_PUBLIC_PUSHER_APP_KEY!,
       {
         cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+        channelAuthorization: {
+          endpoint: "/api/pusher/auth",
+          transport: "ajax",
+        },
       }
     );
   }
   return pusherInstance;
 }
 
-export function useRealtime(
+export function useRealtime<T = unknown>(
   channel: string,
   event: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  callback: (data: any) => void
+  callback: (data: T) => void
 ): void {
   const callbackRef = useRef(callback);
   callbackRef.current = callback;
@@ -35,8 +38,7 @@ export function useRealtime(
     channelRefCounts.set(channel, refCount);
     const channelInstance = refCount === 1 ? pusher.subscribe(channel) : pusher.channel(channel);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const handler = (data: any) => {
+    const handler = (data: T) => {
       callbackRef.current(data);
     };
 

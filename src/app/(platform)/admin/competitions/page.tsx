@@ -1,8 +1,9 @@
 ﻿import { serverAuth } from "@/lib/auth/server-auth";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { db } from "@/lib/db";
 import { competitions, organizations, competitionSponsors } from "@/lib/db/schema";
-import { eq, desc, inArray } from "drizzle-orm";
+import { eq, desc, inArray, count } from "drizzle-orm";
 import { resolveOnboardingUser } from "@/lib/auth/resolve-onboarding-user";
 import { PageHeader } from "@/components/shared/page-header";
 import { InviteJudgeDialog } from "@/components/judge/invite-judge-dialog";
@@ -21,6 +22,7 @@ import { AdminCompetitionActions } from "./actions";
 import { GoLiveButton } from "@/components/competitions/go-live-button";
 import { HackathonManagementActions } from "@/components/competitions/hackathon-management-actions";
 import { CompetitionStatusFilter } from "./competition-status-filter";
+import Link from "next/link";
 
 function formatDate(date: Date | null): string {
   if (!date) return "-";
@@ -51,8 +53,10 @@ const statusLabel: Record<string, string> = {
   cancelled: "Cancelled",
 };
 
+const PAGE_SIZE = 50;
+
 interface PageProps {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; page?: string }>;
 }
 
 export default async function AdminCompetitionsPage({ searchParams }: PageProps) {
@@ -65,38 +69,52 @@ export default async function AdminCompetitionsPage({ searchParams }: PageProps)
     redirect(dbUser.role ? `/${dbUser.role}/dashboard` : "/onboarding");
   }
 
-  const { status: filterStatus } = await searchParams;
+  const { status: filterStatus, page: pageParam } = await searchParams;
   const activeFilter = filterStatus || "all";
+  const currentPage = Math.max(1, parseInt(pageParam || "1", 10));
+  const offset = (currentPage - 1) * PAGE_SIZE;
 
-  const allCompetitions = await db
-    .select({
-      id: competitions.id,
-      title: competitions.title,
-      slug: competitions.slug,
-      category: competitions.category,
-      totalPrizePool: competitions.totalPrizePool,
-      status: competitions.status,
-      visibility: competitions.visibility,
-      createdAt: competitions.createdAt,
-      submissionEnd: competitions.submissionEnd,
-      prizeConfirmed: competitions.prizeConfirmed,
-      organizationName: organizations.name,
-      organizationSlug: organizations.slug,
-    })
-    .from(competitions)
-    .innerJoin(organizations, eq(competitions.organizationId, organizations.id))
-    .orderBy(desc(competitions.createdAt));
+  const statusWhere = activeFilter !== "all" ? eq(competitions.status, activeFilter as "draft" | "pending_review" | "approved" | "active" | "judging" | "completed" | "cancelled") : undefined;
+
+  const [totalRows, statusCounts, pageCompetitions] = await Promise.all([
+    db.select({ total: count() }).from(competitions).where(statusWhere),
+    db
+      .select({ status: competitions.status, cnt: count() })
+      .from(competitions)
+      .groupBy(competitions.status),
+    db
+      .select({
+        id: competitions.id,
+        title: competitions.title,
+        slug: competitions.slug,
+        category: competitions.category,
+        totalPrizePool: competitions.totalPrizePool,
+        status: competitions.status,
+        visibility: competitions.visibility,
+        createdAt: competitions.createdAt,
+        submissionEnd: competitions.submissionEnd,
+        prizeConfirmed: competitions.prizeConfirmed,
+        organizationName: organizations.name,
+        organizationSlug: organizations.slug,
+      })
+      .from(competitions)
+      .innerJoin(organizations, eq(competitions.organizationId, organizations.id))
+      .where(statusWhere)
+      .orderBy(desc(competitions.createdAt))
+      .limit(PAGE_SIZE)
+      .offset(offset),
+  ]);
+
+  const filteredCount = Number(totalRows[0]?.total ?? 0);
+  const totalPages = Math.max(1, Math.ceil(filteredCount / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
 
   const counts: Record<string, number> = {};
-  for (const comp of allCompetitions) {
-    counts[comp.status] = (counts[comp.status] ?? 0) + 1;
+  for (const row of statusCounts) {
+    counts[row.status] = Number(row.cnt);
   }
 
-  const filteredCompetitions = activeFilter === "all"
-    ? allCompetitions
-    : allCompetitions.filter((c) => c.status === activeFilter);
-
-  const compIds = filteredCompetitions.map((c) => c.id);
+  const compIds = pageCompetitions.map((c) => c.id);
   const sponsorsByComp = new Map<string, { count: number; totalAmount: number; noContact: number }>();
   if (compIds.length > 0) {
     const allSponsors = await db
@@ -120,14 +138,16 @@ export default async function AdminCompetitionsPage({ searchParams }: PageProps)
           title="Hackathon Management"
           description="View and manage all hackathons across all statuses"
         />
-        {filteredCompetitions.length > 0 && (
-          <InviteJudgeDialog competitionId={filteredCompetitions[0].id} />
+        {pageCompetitions.length > 0 && (
+          <InviteJudgeDialog competitionId={pageCompetitions[0].id} />
         )}
       </div>
 
-      <CompetitionStatusFilter currentStatus={activeFilter} counts={counts} />
+      <Suspense fallback={null}>
+        <CompetitionStatusFilter currentStatus={activeFilter} counts={counts} />
+      </Suspense>
 
-      {filteredCompetitions.length === 0 ? (
+      {filteredCount === 0 ? (
         <EmptyState
           icon={Trophy}
           title="No hackathons"
@@ -156,7 +176,7 @@ export default async function AdminCompetitionsPage({ searchParams }: PageProps)
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredCompetitions.map((comp) => (
+              {pageCompetitions.map((comp) => (
                 <TableRow key={comp.id}>
                   <TableCell className="font-medium">{comp.title}</TableCell>
                   <TableCell>{comp.organizationName}</TableCell>
@@ -240,11 +260,43 @@ export default async function AdminCompetitionsPage({ searchParams }: PageProps)
         </div>
       )}
 
-      {filteredCompetitions.length > 0 && (
-        <p className="text-sm text-muted-foreground">
-          Showing {filteredCompetitions.length} hackathon{filteredCompetitions.length !== 1 ? "s" : ""}
-          {activeFilter !== "all" && ` with status "${statusLabel[activeFilter] ?? activeFilter}"`}
-        </p>
+      {filteredCount > 0 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Showing {offset + 1}–{Math.min(safePage * PAGE_SIZE, filteredCount)} of{" "}
+            {filteredCount} hackathon{filteredCount !== 1 ? "s" : ""}
+            {activeFilter !== "all" && ` with status "${statusLabel[activeFilter] ?? activeFilter}"`}
+          </p>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-2">
+              {safePage > 1 && (
+                <Link
+                  href={`?${new URLSearchParams({
+                    ...(activeFilter !== "all" ? { status: activeFilter } : {}),
+                    page: String(safePage - 1),
+                  }).toString()}`}
+                  className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted"
+                >
+                  Previous
+                </Link>
+              )}
+              <span className="text-sm text-muted-foreground">
+                Page {safePage} of {totalPages}
+              </span>
+              {safePage < totalPages && (
+                <Link
+                  href={`?${new URLSearchParams({
+                    ...(activeFilter !== "all" ? { status: activeFilter } : {}),
+                    page: String(safePage + 1),
+                  }).toString()}`}
+                  className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted"
+                >
+                  Next
+                </Link>
+              )}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

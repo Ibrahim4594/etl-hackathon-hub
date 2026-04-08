@@ -56,7 +56,7 @@ Draft → Submit for Review → Admin Approves ("approved") → Organizer clicks
 Organizer enters name + email + expertise → automated email via Resend → judge signs up → picks "Judge" → fills profile → auto-assigned to competition (matched by email)
 
 ### Admin Credentials
-Email: `admin@spark.com` | Password: `spark@admin2026`
+Admin bootstrap requires `ADMIN_BOOTSTRAP_EMAIL` and `ADMIN_BOOTSTRAP_PASSWORD` environment variables.
 
 ## UI Rules (MUST FOLLOW)
 

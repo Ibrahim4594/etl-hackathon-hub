@@ -35,6 +35,8 @@ import {
 } from "lucide-react";
 import { COMPETITION_STATUS_COLORS, SUBMISSION_STATUS_COLORS, formatStatus } from "@/lib/constants/status-colors";
 
+export const revalidate = 60;
+
 export default async function AdminDashboardPage() {
   const { userId } = await serverAuth();
   if (!userId) redirect("/sign-in");
@@ -49,6 +51,9 @@ export default async function AdminDashboardPage() {
     [orgStats],
     [{ totalTeams }],
     [{ totalEvals }],
+    recentCompetitions,
+    recentSubmissions,
+    pendingOrgsList,
   ] = await Promise.all([
     db.select({
       totalUsers: sql<number>`count(*)`,
@@ -75,16 +80,8 @@ export default async function AdminDashboardPage() {
     }).from(organizations),
     db.select({ totalTeams: sql<number>`count(*)` }).from(teams),
     db.select({ totalEvals: sql<number>`count(*)` }).from(judgeEvaluations),
-  ]);
-
-  const { totalUsers, totalStudents, totalSponsors, totalJudges } = userStats;
-  const { totalComps, activeComps, pendingReview, approvedComps } = compStats;
-  const { totalSubs, validSubs, flaggedSubs, invalidSubs } = subStats;
-  const { totalOrgs, verifiedOrgs, pendingOrgs } = orgStats;
-
-  // Recent competitions (latest 5)
-  const recentCompetitions = await db
-    .select({
+    // Recent competitions (latest 5)
+    db.select({
       id: competitions.id,
       title: competitions.title,
       status: competitions.status,
@@ -92,14 +89,12 @@ export default async function AdminDashboardPage() {
       orgName: organizations.name,
       totalPrizePool: competitions.totalPrizePool,
     })
-    .from(competitions)
-    .innerJoin(organizations, eq(competitions.organizationId, organizations.id))
-    .orderBy(desc(competitions.createdAt))
-    .limit(5);
-
-  // Recent submissions (latest 5)
-  const recentSubmissions = await db
-    .select({
+      .from(competitions)
+      .innerJoin(organizations, eq(competitions.organizationId, organizations.id))
+      .orderBy(desc(competitions.createdAt))
+      .limit(5),
+    // Recent submissions (latest 5)
+    db.select({
       id: submissions.id,
       title: submissions.title,
       status: submissions.status,
@@ -107,24 +102,28 @@ export default async function AdminDashboardPage() {
       compTitle: competitions.title,
       teamName: teams.name,
     })
-    .from(submissions)
-    .innerJoin(competitions, eq(submissions.competitionId, competitions.id))
-    .innerJoin(teams, eq(submissions.teamId, teams.id))
-    .orderBy(desc(submissions.createdAt))
-    .limit(5);
-
-  // Pending org verifications
-  const pendingOrgsList = await db
-    .select({
+      .from(submissions)
+      .innerJoin(competitions, eq(submissions.competitionId, competitions.id))
+      .innerJoin(teams, eq(submissions.teamId, teams.id))
+      .orderBy(desc(submissions.createdAt))
+      .limit(5),
+    // Pending org verifications
+    db.select({
       id: organizations.id,
       name: organizations.name,
       contactEmail: organizations.contactEmail,
       createdAt: organizations.createdAt,
     })
-    .from(organizations)
-    .where(eq(organizations.verification, "pending"))
-    .orderBy(desc(organizations.createdAt))
-    .limit(5);
+      .from(organizations)
+      .where(eq(organizations.verification, "pending"))
+      .orderBy(desc(organizations.createdAt))
+      .limit(5),
+  ]);
+
+  const { totalUsers, totalStudents, totalSponsors, totalJudges } = userStats;
+  const { totalComps, activeComps, pendingReview, approvedComps } = compStats;
+  const { totalSubs, validSubs, flaggedSubs, invalidSubs } = subStats;
+  const { totalOrgs, verifiedOrgs, pendingOrgs } = orgStats;
 
   const pReview = Number(pendingReview);
   const pOrgs = Number(pendingOrgs);

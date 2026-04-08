@@ -4,6 +4,53 @@ import { competitions, organizations, users, competitionSponsors } from "@/lib/d
 import { eq, asc } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { apiError } from "@/lib/api-error";
+import { z } from "zod/v4";
+
+const competitionUpdateSchema = z.object({
+  title: z.string().min(1).max(200).optional(),
+  tagline: z.string().max(300).optional(),
+  description: z.string().optional(),
+  category: z.string().optional(),
+  tags: z.array(z.string().max(30)).max(10).optional(),
+  coverImageUrl: z.string().url().optional().nullable(),
+  logoUrl: z.string().url().optional().nullable(),
+  challengeStatement: z.string().optional(),
+  requirements: z.any().optional(),
+  resources: z.any().optional(),
+  minTeamSize: z.number().int().min(1).optional(),
+  maxTeamSize: z.number().int().min(1).optional(),
+  maxParticipants: z.number().int().min(1).optional().nullable(),
+  allowSoloParticipation: z.boolean().optional(),
+  eligibilityCriteria: z.string().optional().nullable(),
+  registrationStart: z.string().optional().nullable(),
+  registrationEnd: z.string().optional().nullable(),
+  submissionStart: z.string().optional().nullable(),
+  submissionEnd: z.string().optional().nullable(),
+  judgingStart: z.string().optional().nullable(),
+  judgingEnd: z.string().optional().nullable(),
+  resultsDate: z.string().optional().nullable(),
+  prizes: z.any().optional(),
+  totalPrizePool: z.number().min(0).optional().nullable(),
+  judgingCriteria: z.any().optional(),
+  aiJudgingWeight: z.number().min(0).max(100).optional(),
+  humanJudgingWeight: z.number().min(0).max(100).optional(),
+  finalistCount: z.number().int().min(1).optional(),
+  submissionRequirements: z.any().optional(),
+  sponsors: z.array(z.object({
+    companyName: z.string().min(1),
+    logoUrl: z.string().url().optional().nullable(),
+    website: z.string().url().optional().nullable(),
+    contributionType: z.string().optional(),
+    contributionTitle: z.string().optional(),
+    contributionDescription: z.string().optional().nullable(),
+    contributionAmount: z.number().optional().nullable(),
+    contactPersonName: z.string().optional().nullable(),
+    contactPersonEmail: z.string().email().optional().nullable(),
+    contactPersonPhone: z.string().optional().nullable(),
+    sponsorTier: z.string().optional(),
+    featured: z.boolean().optional(),
+  })).optional(),
+});
 
 export async function GET(
   req: Request,
@@ -135,40 +182,12 @@ export async function PATCH(
     );
   }
 
-  const body = await req.json();
-
-  // Build partial update object from allowed fields
-  const allowedFields = [
-    "title",
-    "tagline",
-    "description",
-    "category",
-    "tags",
-    "coverImageUrl",
-    "logoUrl",
-    "challengeStatement",
-    "requirements",
-    "resources",
-    "minTeamSize",
-    "maxTeamSize",
-    "maxParticipants",
-    "allowSoloParticipation",
-    "eligibilityCriteria",
-    "registrationStart",
-    "registrationEnd",
-    "submissionStart",
-    "submissionEnd",
-    "judgingStart",
-    "judgingEnd",
-    "resultsDate",
-    "prizes",
-    "totalPrizePool",
-    "judgingCriteria",
-    "aiJudgingWeight",
-    "humanJudgingWeight",
-    "finalistCount",
-    "submissionRequirements",
-  ] as const;
+  const rawBody = await req.json();
+  const parsed = competitionUpdateSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid request body", issues: parsed.error.issues }, { status: 400 });
+  }
+  const body = parsed.data;
 
   const dateFields = [
     "registrationStart",
@@ -178,17 +197,16 @@ export async function PATCH(
     "judgingStart",
     "judgingEnd",
     "resultsDate",
-  ];
+  ] as const;
 
   const updateData: Record<string, unknown> = { updatedAt: new Date() };
 
-  for (const field of allowedFields) {
-    if (field in body) {
-      if (dateFields.includes(field)) {
-        updateData[field] = body[field] ? new Date(body[field]) : null;
-      } else {
-        updateData[field] = body[field];
-      }
+  const { sponsors: _sponsors, ...fields } = body;
+  for (const [key, value] of Object.entries(fields)) {
+    if (dateFields.includes(key as typeof dateFields[number])) {
+      updateData[key] = value ? new Date(value as string) : null;
+    } else {
+      updateData[key] = value;
     }
   }
 
@@ -200,7 +218,7 @@ export async function PATCH(
       .returning();
 
     // If sponsors array is provided, replace all non-organizer sponsors
-    if (Array.isArray(body.sponsors)) {
+    if (body.sponsors !== undefined) {
       // Delete existing non-organizer sponsors
       await tx
         .delete(competitionSponsors)
@@ -234,19 +252,19 @@ export async function PATCH(
         await tx.insert(competitionSponsors).values(
           body.sponsors.map((s: Record<string, unknown>, i: number) => ({
             competitionId: id,
-            companyName: s.companyName,
-            logoUrl: s.logoUrl || null,
-            website: s.website || null,
-            contributionType: s.contributionType || "monetary",
-            contributionTitle: s.contributionTitle || "Sponsor",
-            contributionDescription: s.contributionDescription || null,
-            contributionAmount: s.contributionAmount || null,
-            contactPersonName: s.contactPersonName || null,
-            contactPersonEmail: s.contactPersonEmail || null,
-            contactPersonPhone: s.contactPersonPhone || null,
-            sponsorTier: s.sponsorTier || "partner",
+            companyName: String(s.companyName ?? ""),
+            logoUrl: s.logoUrl ? String(s.logoUrl) : null,
+            website: s.website ? String(s.website) : null,
+            contributionType: String(s.contributionType || "monetary") as "monetary" | "tech_credits" | "mentorship" | "internships" | "prizes_inkind" | "cloud_services" | "api_credits" | "other",
+            contributionTitle: String(s.contributionTitle || "Sponsor"),
+            contributionDescription: s.contributionDescription ? String(s.contributionDescription) : null,
+            contributionAmount: s.contributionAmount ? Number(s.contributionAmount) : null,
+            contactPersonName: s.contactPersonName ? String(s.contactPersonName) : null,
+            contactPersonEmail: s.contactPersonEmail ? String(s.contactPersonEmail) : null,
+            contactPersonPhone: s.contactPersonPhone ? String(s.contactPersonPhone) : null,
+            sponsorTier: String(s.sponsorTier || "partner") as "title" | "gold" | "silver" | "bronze" | "partner",
             displayOrder: i + 1,
-            featured: s.featured || false,
+            featured: Boolean(s.featured),
             isOrganizer: false,
           }))
         );

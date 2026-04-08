@@ -8,9 +8,9 @@
 import Stripe from "stripe";
 import { db } from "@/lib/db";
 import { payments, competitions } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
-function getStripeClient() {
+export function getStripeClient() {
   return new Stripe(process.env.STRIPE_SECRET_KEY!, {
     apiVersion: "2026-02-25.clover",
   });
@@ -115,7 +115,10 @@ export async function handleWebhookEvent(event: Stripe.Event): Promise<void> {
               status: "pending_review",
               updatedAt: new Date(),
             })
-            .where(eq(competitions.id, competitionId));
+            .where(and(
+              eq(competitions.id, competitionId),
+              eq(competitions.status, "draft")  // Only update if still draft
+            ));
         }
       });
 

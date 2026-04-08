@@ -1,3 +1,4 @@
+// TODO: Add rate limiting (@upstash/ratelimit) — currently unprotected
 import { clerkClient } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
@@ -6,18 +7,22 @@ import { serverAuth } from "@/lib/auth/server-auth";
 import { NextResponse } from "next/server";
 import { apiError } from "@/lib/api-error";
 
-const ADMIN_EMAIL = "admin@spark.com";
-const ADMIN_PASSWORD = "spark@admin2026";
+const ADMIN_EMAIL = process.env.ADMIN_BOOTSTRAP_EMAIL;
+const ADMIN_PASSWORD = process.env.ADMIN_BOOTSTRAP_PASSWORD;
 
 /**
  * POST /api/onboarding/admin
- * Elevate a signed-in user to admin role using hardcoded credentials.
+ * Elevate a signed-in user to admin role using environment-variable credentials.
  *
  * @auth Required (Clerk session)
  * @body { email, password }
  * @returns { success: true } or { error: string }
  */
 export async function POST(req: Request) {
+  if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+    return NextResponse.json({ error: "Admin bootstrap not configured" }, { status: 404 });
+  }
+
   try {
     const { userId } = await serverAuth();
     if (!userId) {

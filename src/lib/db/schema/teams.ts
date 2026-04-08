@@ -7,7 +7,7 @@ export const teams = pgTable("teams", {
   competitionId: uuid("competition_id").notNull().references(() => competitions.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   inviteCode: text("invite_code").notNull().unique(),
-  leadId: uuid("lead_id").notNull().references(() => users.id),
+  leadId: uuid("lead_id").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

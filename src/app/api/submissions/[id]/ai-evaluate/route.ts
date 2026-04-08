@@ -101,7 +101,7 @@ export async function POST(
 
       // Notify participant with score
       triggerEvent(
-        channels.participant(updatedSub.submittedBy),
+        channels.participant(updatedSub.submittedBy!),
         EVENTS.PARTICIPANT_SCORE_AVAILABLE,
         {
           competitionId: updatedSub.competitionId,

@@ -90,7 +90,7 @@ export async function POST(
 
       // Notify the team lead
       triggerEvent(
-        channels.participant(team.leadId),
+        channels.participant(team.leadId!),
         EVENTS.PARTICIPANT_TEAM_UPDATE,
         teamUpdatePayload
       );

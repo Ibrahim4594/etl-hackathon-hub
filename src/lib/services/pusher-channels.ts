@@ -1,3 +1,5 @@
+// TODO: Prefix sensitive channels with "private-" and implement /api/pusher/auth endpoint
+
 /**
  * Pusher channel naming conventions and event type constants.
  *
@@ -13,10 +15,10 @@
 
 export const channels = {
   global: () => "global" as const,
-  organizer: (orgId: string) => `organizer-${orgId}` as const,
-  participant: (userId: string) => `participant-${userId}` as const,
+  organizer: (orgId: string) => `private-organizer-${orgId}` as const,
+  participant: (userId: string) => `private-participant-${userId}` as const,
   competition: (compId: string) => `competition-${compId}` as const,
-  user: (userId: string) => `user-${userId}` as const,
+  user: (userId: string) => `private-user-${userId}` as const,
 };
 
 // ── Event type constants ──

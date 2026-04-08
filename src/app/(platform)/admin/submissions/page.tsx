@@ -1,8 +1,9 @@
 import { serverAuth } from "@/lib/auth/server-auth";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { db } from "@/lib/db";
 import { submissions, teams, competitions } from "@/lib/db/schema";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, count } from "drizzle-orm";
 import { resolveOnboardingUser } from "@/lib/auth/resolve-onboarding-user";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -73,52 +74,52 @@ export default async function AdminSubmissionsPage({ searchParams }: PageProps) 
   const activeFilter = filterStatus || "all";
   const currentPage = Math.max(1, parseInt(pageParam || "1", 10));
 
-  // Fetch all submissions joined with team and competition
-  const allSubmissions = await db
-    .select({
-      id: submissions.id,
-      title: submissions.title,
-      status: submissions.status,
-      aiScore: submissions.aiScore,
-      humanScore: submissions.humanScore,
-      finalScore: submissions.finalScore,
-      rank: submissions.rank,
-      createdAt: submissions.createdAt,
-      teamName: teams.name,
-      teamId: teams.id,
-      competitionTitle: competitions.title,
-      competitionId: competitions.id,
-      competitionSlug: competitions.slug,
-    })
-    .from(submissions)
-    .innerJoin(teams, eq(submissions.teamId, teams.id))
-    .innerJoin(competitions, eq(submissions.competitionId, competitions.id))
-    .orderBy(desc(submissions.createdAt));
+  const offset = (currentPage - 1) * PAGE_SIZE;
+  const statusWhere = activeFilter !== "all" ? eq(submissions.status, activeFilter as "submitted" | "validating" | "valid" | "invalid" | "flagged" | "ai_evaluated" | "judged" | "finalist" | "winner") : undefined;
 
-  // Compute counts per status for the filter tabs
+  const [statusCountRows, paginatedSubmissions] = await Promise.all([
+    db
+      .select({ status: submissions.status, cnt: count() })
+      .from(submissions)
+      .groupBy(submissions.status),
+    db
+      .select({
+        id: submissions.id,
+        title: submissions.title,
+        status: submissions.status,
+        aiScore: submissions.aiScore,
+        humanScore: submissions.humanScore,
+        finalScore: submissions.finalScore,
+        rank: submissions.rank,
+        createdAt: submissions.createdAt,
+        teamName: teams.name,
+        teamId: teams.id,
+        competitionTitle: competitions.title,
+        competitionId: competitions.id,
+        competitionSlug: competitions.slug,
+      })
+      .from(submissions)
+      .innerJoin(teams, eq(submissions.teamId, teams.id))
+      .innerJoin(competitions, eq(submissions.competitionId, competitions.id))
+      .where(statusWhere)
+      .orderBy(desc(submissions.createdAt))
+      .limit(PAGE_SIZE)
+      .offset(offset),
+  ]);
+
   const counts: Record<string, number> = {};
-  for (const sub of allSubmissions) {
-    counts[sub.status] = (counts[sub.status] ?? 0) + 1;
+  let totalCount = 0;
+  for (const row of statusCountRows) {
+    counts[row.status] = Number(row.cnt);
+    totalCount += Number(row.cnt);
   }
 
-  // Compute stat card values
-  const totalCount = allSubmissions.length;
-  const validCount = allSubmissions.filter((s) => s.status === "valid").length;
-  const flaggedCount = allSubmissions.filter((s) => s.status === "flagged").length;
-  const invalidCount = allSubmissions.filter((s) => s.status === "invalid").length;
-
-  // Apply status filter
-  const filteredSubmissions = activeFilter === "all"
-    ? allSubmissions
-    : allSubmissions.filter((s) => s.status === activeFilter);
-
-  // Pagination
-  const totalPages = Math.max(1, Math.ceil(filteredSubmissions.length / PAGE_SIZE));
+  const validCount = counts["valid"] ?? 0;
+  const flaggedCount = counts["flagged"] ?? 0;
+  const invalidCount = counts["invalid"] ?? 0;
+  const filteredCount = activeFilter === "all" ? totalCount : (counts[activeFilter] ?? 0);
+  const totalPages = Math.max(1, Math.ceil(filteredCount / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
-  const paginatedSubmissions = filteredSubmissions.slice(
-    (safePage - 1) * PAGE_SIZE,
-    safePage * PAGE_SIZE
-  );
 
   function formatScore(score: number | null): string {
     if (score === null || score === undefined) return "-";
@@ -139,9 +140,11 @@ export default async function AdminSubmissionsPage({ searchParams }: PageProps) 
         <StatCard title="Invalid" value={invalidCount} icon={XCircle} />
       </div>
 
-      <SubmissionStatusFilter currentStatus={activeFilter} counts={counts} />
+      <Suspense fallback={null}>
+        <SubmissionStatusFilter currentStatus={activeFilter} counts={counts} />
+      </Suspense>
 
-      {filteredSubmissions.length === 0 ? (
+      {filteredCount === 0 ? (
         <EmptyState
           icon={FileText}
           title="No submissions"
@@ -200,11 +203,11 @@ export default async function AdminSubmissionsPage({ searchParams }: PageProps) 
         </div>
       )}
 
-      {filteredSubmissions.length > 0 && (
+      {filteredCount > 0 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filteredSubmissions.length)} of{" "}
-            {filteredSubmissions.length} submission{filteredSubmissions.length !== 1 ? "s" : ""}
+            Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filteredCount)} of{" "}
+            {filteredCount} submission{filteredCount !== 1 ? "s" : ""}
             {activeFilter !== "all" && ` with status "${statusLabel[activeFilter] ?? activeFilter}"`}
           </p>
 

@@ -60,6 +60,8 @@ function daysUntil(date: Date | string | null): number {
   );
 }
 
+export const revalidate = 60;
+
 export default async function StudentDashboardPage() {
   const { userId } = await serverAuth();
   if (!userId) redirect("/sign-in");

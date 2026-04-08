@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, jsonb, real, integer } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, jsonb, real, integer, uniqueIndex } from "drizzle-orm/pg-core";
 import { competitions } from "./competitions";
 import { teams } from "./teams";
 import { users } from "./users";
@@ -8,7 +8,7 @@ export const submissions = pgTable("submissions", {
   id: uuid("id").defaultRandom().primaryKey(),
   competitionId: uuid("competition_id").notNull().references(() => competitions.id, { onDelete: "cascade" }),
   teamId: uuid("team_id").notNull().references(() => teams.id, { onDelete: "cascade" }),
-  submittedBy: uuid("submitted_by").notNull().references(() => users.id),
+  submittedBy: uuid("submitted_by").references(() => users.id, { onDelete: "set null" }),
 
   // Project details
   title: text("title").notNull(),
@@ -37,7 +37,9 @@ export const submissions = pgTable("submissions", {
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  teamCompetitionUnique: uniqueIndex("submissions_team_competition_idx").on(table.teamId, table.competitionId),
+}));
 
 export type Submission = typeof submissions.$inferSelect;
 export type NewSubmission = typeof submissions.$inferInsert;

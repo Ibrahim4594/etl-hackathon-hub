@@ -1,3 +1,4 @@
+// TODO: Add rate limiting (@upstash/ratelimit) — currently unprotected
 import { serverAuth } from "@/lib/auth/server-auth";
 import { NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
@@ -10,7 +11,6 @@ const ALLOWED_TYPES = [
   "image/png",
   "image/jpeg",
   "image/webp",
-  "image/svg+xml",
   "image/gif",
 ];
 
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     if (!ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json(
         {
-          error: `Invalid file type: ${file.type}. Allowed: PNG, JPEG, WebP, SVG, GIF`,
+          error: `Invalid file type: ${file.type}. Allowed: PNG, JPEG, WebP, GIF`,
         },
         { status: 400 }
       );

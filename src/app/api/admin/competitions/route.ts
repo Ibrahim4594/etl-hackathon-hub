@@ -1,12 +1,13 @@
 import { serverAuth } from "@/lib/auth/server-auth";
 import { db } from "@/lib/db";
-import { competitions, users, organizations } from "@/lib/db/schema";
+import { competitions, organizations } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { triggerEvent } from "@/lib/services/pusher";
 import { channels, EVENTS } from "@/lib/services/pusher-channels";
 import { createNotification } from "@/lib/services/notification";
 import { apiError } from "@/lib/api-error";
+import { resolveOnboardingUser } from "@/lib/auth/resolve-onboarding-user";
 
 export async function PATCH(req: Request) {
   try {
@@ -15,11 +16,8 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Look up DB user by clerkId
-    const [dbUser] = await db
-      .select()
-      .from(users)
-      .where(eq(users.clerkId, userId));
+    // Look up DB user
+    const dbUser = await resolveOnboardingUser(userId);
 
     if (!dbUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -81,7 +79,7 @@ export async function PATCH(req: Request) {
           .where(eq(organizations.id, competition.organizationId));
 
         if (org) {
-          triggerEvent(channels.organizer(org.id), EVENTS.ORG_COMPETITION_STATUS, {
+          await triggerEvent(channels.organizer(org.id), EVENTS.ORG_COMPETITION_STATUS, {
             competitionId: competition.id,
             title: competition.title,
             oldStatus: "pending_review",

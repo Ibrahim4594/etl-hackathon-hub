@@ -101,7 +101,7 @@ export async function POST(
 
       // Notify participant
       triggerEvent(
-        channels.participant(updatedSub.submittedBy),
+        channels.participant(updatedSub.submittedBy!),
         EVENTS.PARTICIPANT_SUBMISSION_STATUS,
         {
           competitionId: updatedSub.competitionId,
