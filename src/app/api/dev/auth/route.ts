@@ -11,6 +11,9 @@ const DEV_USERS: Record<string, { email: string; firstName: string; lastName: st
 };
 
 export async function POST(req: Request) {
+  if (process.env.NODE_ENV === "production") {
+    return new Response("Not found", { status: 404 });
+  }
   const { role } = await req.json();
 
   if (!DEV_USERS[role]) {
@@ -80,6 +83,9 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE() {
+  if (process.env.NODE_ENV === "production") {
+    return new Response("Not found", { status: 404 });
+  }
   const res = NextResponse.json({ success: true });
   res.cookies.delete("dev-auth-role");
   return res;

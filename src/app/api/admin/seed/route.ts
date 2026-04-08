@@ -30,6 +30,10 @@ export async function POST() {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    if (dbUser.role !== "admin") {
+      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+    }
+
     // Create demo organizations
     const orgData = [
       {
