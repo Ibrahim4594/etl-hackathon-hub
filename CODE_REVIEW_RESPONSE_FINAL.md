@@ -12,31 +12,33 @@ All issues from Amin's code review have been addressed. 80 files changed across 
 
 ---
 
-## Amin Asked, We Delivered
-
 ### Security
-- Production guard on dev routes
+- Production guard on dev routes + removed from public middleware in production
 - Admin role check on seed endpoint
 - Admin credentials secured via environment variables
-- Clerk webhook uses raw body for svix HMAC verification
+- Clerk webhook uses raw body (`req.text()`) for svix HMAC verification
 - `user.updated` webhook no longer syncs role (DB is source of truth)
 - Soft delete on `user.deleted` (preserves financial/audit records)
 - Middleware blocks roleless users from all API routes except onboarding
 - Auth + ownership checks added to all unauthenticated endpoints
-- Zod validation on all input-accepting routes
+- Zod validation on all input-accepting routes (inline schemas centralized)
 - AI judge prompt injection mitigation (XML tags + system instruction)
+- AI evaluation idempotency check (no duplicate OpenAI calls)
 - Stripe webhook: idempotency check + atomic transactions
 - Error messages sanitized across all 29 API routes (`apiError()` helper)
-- Private Pusher channels with server-side authorization endpoint
+- Private Pusher channels (`private-` prefix) with `/api/pusher/auth` authorization endpoint
 - HTML escaping in outbound emails
 - SVG removed from upload allowed types
+- HTTP status codes fixed (401 for unauth, 403 for forbidden, 404 for not found)
+- Admin role update syncs Clerk metadata via `updateUserMetadata()` (shallow merge)
 
 ### Performance
 - N+1 query in judge assignments replaced with batched aggregates
 - Database indexes applied (9 indexes on FK/filter columns)
 - Admin pages: DB-level pagination (replaced full table scans)
 - Dashboard queries parallelized with `Promise.all`
-- DB connection pool configured for serverless
+- DB connection pool configured for serverless (`max: 1`)
+- Pusher channel teardown bug fixed (ref counting — no more shared channel teardown on single unmount)
 - Sequential awaits eliminated across all dashboard pages
 
 ### Code Quality
@@ -45,11 +47,13 @@ All issues from Amin's code review have been addressed. 80 files changed across 
 - Status colors centralized (no more inline definitions)
 - Dead code removed (`ensure-db-user.ts`, `quick-publish` route)
 - `window.location.reload()` replaced with `router.refresh()`
-- `getAuthenticatedDbUser()` centralized auth helper
+- `getAuthenticatedDbUser()` centralized auth helper (eliminates 174 lines of boilerplate)
+- `inArray()`/`notInArray()` replacing manual `sql.join` patterns
 - Competition state machine: `active -> judging` transition route added
 - Winner announcement wrapped in atomic transaction
 - FK `onDelete` actions on all schema columns
 - `UNIQUE` constraint on submissions table
+- Zustand wizard reset on mount (prevents stale form data)
 
 ---
 
