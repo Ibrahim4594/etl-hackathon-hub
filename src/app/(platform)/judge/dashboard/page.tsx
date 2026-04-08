@@ -8,7 +8,7 @@ import {
   submissions,
   teams,
 } from "@/lib/db/schema";
-import { eq, and, sql, desc } from "drizzle-orm";
+import { eq, and, sql, desc, inArray } from "drizzle-orm";
 import { resolveOnboardingUser } from "@/lib/auth/resolve-onboarding-user";
 import { serverAuth } from "@/lib/auth/server-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,12 +59,7 @@ export default async function JudgeDashboardPage() {
     const [{ count: subCount }] = await db
       .select({ count: sql<number>`count(*)` })
       .from(submissions)
-      .where(
-        sql`${submissions.competitionId} IN (${sql.join(
-          compIds.map((id) => sql`${id}`),
-          sql`, `
-        )})`
-      );
+      .where(inArray(submissions.competitionId, compIds));
     totalAssigned = Number(subCount);
 
     const [{ count: evalCount }] = await db

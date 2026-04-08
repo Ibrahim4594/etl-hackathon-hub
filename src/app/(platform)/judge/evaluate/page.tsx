@@ -8,7 +8,7 @@ import {
   judgeAssignments,
   judgeEvaluations,
 } from "@/lib/db/schema";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { resolveOnboardingUser } from "@/lib/auth/resolve-onboarding-user";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
@@ -82,12 +82,7 @@ export default async function JudgeEvaluatePage() {
     .from(submissions)
     .innerJoin(teams, eq(submissions.teamId, teams.id))
     .innerJoin(competitions, eq(submissions.competitionId, competitions.id))
-    .where(
-      sql`${submissions.competitionId} IN (${sql.join(
-        compIds.map((id) => sql`${id}`),
-        sql`, `
-      )})`
-    )
+    .where(inArray(submissions.competitionId, compIds))
     .orderBy(desc(submissions.createdAt));
 
   // Check which ones this judge already evaluated

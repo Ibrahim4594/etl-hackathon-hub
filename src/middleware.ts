@@ -60,8 +60,11 @@ export default clerkMiddleware(async (auth, req) => {
   // If no role or onboarding not complete, redirect to onboarding
   // But allow API routes through to prevent redirect loops
   if (!role || !onboardingComplete) {
-    if (req.nextUrl.pathname.startsWith("/api/")) {
+    if (req.nextUrl.pathname.startsWith("/api/onboarding")) {
       return NextResponse.next();
+    }
+    if (req.nextUrl.pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "Onboarding required" }, { status: 403 });
     }
     if (!isOnboardingRoute(req)) {
       return NextResponse.redirect(new URL("/onboarding", req.url));

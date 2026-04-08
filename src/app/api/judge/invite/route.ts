@@ -11,6 +11,7 @@ import { eq, and } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { sendEmail } from "@/lib/services/email";
 import { createNotification } from "@/lib/services/notification";
+import { apiError } from "@/lib/api-error";
 
 /**
  * POST /api/judge/invite
@@ -157,9 +158,6 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error("Judge invite error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to invite judge" },
-      { status: 500 }
-    );
+    return apiError(error, "Failed to invite judge");
   }
 }

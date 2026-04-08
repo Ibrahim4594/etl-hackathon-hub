@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { studentOnboardingSchema } from "@/lib/validators/auth";
 import { resolveOnboardingUser } from "@/lib/auth/resolve-onboarding-user";
 import { NextResponse } from "next/server";
+import { apiError } from "@/lib/api-error";
 
 /**
  * POST /api/onboarding/student
@@ -37,7 +38,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Failed to resolve user. Please try again." }, { status: 500 });
     }
 
-    if (dbUser.onboardingComplete && dbUser.role && dbUser.role !== "student") {
+    if (dbUser.role && dbUser.role !== "student") {
       return NextResponse.json({ error: `Role already assigned as "${dbUser.role}".` }, { status: 403 });
     }
 
@@ -72,9 +73,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Student onboarding error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal server error" },
-      { status: 500 }
-    );
+    return apiError(error, "Internal server error");
   }
 }

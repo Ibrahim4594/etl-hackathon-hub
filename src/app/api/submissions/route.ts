@@ -7,6 +7,7 @@ import { submissionCreateSchema } from "@/lib/validators/submission";
 import { triggerEvent } from "@/lib/services/pusher";
 import { channels, EVENTS } from "@/lib/services/pusher-channels";
 import type { SubmissionReceivedPayload } from "@/lib/services/pusher-channels";
+import { apiError } from "@/lib/api-error";
 
 /**
  * POST /api/submissions
@@ -141,9 +142,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, submission }, { status: 201 });
   } catch (error) {
     console.error("POST /api/submissions error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to create submission" },
-      { status: 500 }
-    );
+    return apiError(error, "Failed to create submission");
   }
 }

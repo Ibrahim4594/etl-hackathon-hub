@@ -12,6 +12,7 @@ import { NextResponse } from "next/server";
 import { triggerEvent } from "@/lib/services/pusher";
 import { channels, EVENTS } from "@/lib/services/pusher-channels";
 import { createNotification } from "@/lib/services/notification";
+import { apiError } from "@/lib/api-error";
 
 /**
  * POST /api/competitions/[id]/announce
@@ -180,9 +181,6 @@ export async function POST(
     });
   } catch (error) {
     console.error("Announce winners error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to announce winners" },
-      { status: 500 }
-    );
+    return apiError(error, "Failed to announce winners");
   }
 }

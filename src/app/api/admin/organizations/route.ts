@@ -4,6 +4,7 @@ import { organizations, users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { createNotification } from "@/lib/services/notification";
+import { apiError } from "@/lib/api-error";
 
 export async function PATCH(req: Request) {
   try {
@@ -89,9 +90,6 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ organization: updated });
   } catch (error) {
     console.error("PATCH /api/admin/organizations error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to update organization" },
-      { status: 500 }
-    );
+    return apiError(error, "Failed to update organization");
   }
 }

@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { serverAuth } from "@/lib/auth/server-auth";
 import { ensureDbUser } from "@/lib/auth/ensure-db-user";
 import { NextResponse } from "next/server";
+import { apiError } from "@/lib/api-error";
 
 // Default settings — used when no DB value exists
 const DEFAULTS: Record<string, string> = {
@@ -38,10 +39,7 @@ export async function GET() {
     return NextResponse.json({ settings });
   } catch (error) {
     console.error("GET /api/admin/settings error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch settings" },
-      { status: 500 }
-    );
+    return apiError(error, "Failed to fetch settings");
   }
 }
 
@@ -84,9 +82,6 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("PATCH /api/admin/settings error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to update settings" },
-      { status: 500 }
-    );
+    return apiError(error, "Failed to update settings");
   }
 }

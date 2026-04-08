@@ -26,20 +26,7 @@ export async function createCheckoutSession(params: {
 }): Promise<string> {
   const { competitionId, organizationId, amount, currency = "usd" } = params;
 
-  // Create a pending payment record
-  const [payment] = await db
-    .insert(payments)
-    .values({
-      organizationId,
-      competitionId,
-      amount,
-      currency,
-      status: "pending",
-      description: `Competition listing fee`,
-    })
-    .returning();
-
-  // Create a Stripe Checkout Session
+  // Create Stripe Checkout Session first — avoids orphan DB records if Stripe fails
   const stripe = getStripeClient();
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
@@ -60,24 +47,25 @@ export async function createCheckoutSession(params: {
     metadata: {
       competitionId,
       organizationId,
-      paymentId: payment.id,
     },
     success_url: `${process.env.NEXT_PUBLIC_APP_URL}/sponsor/competitions/${competitionId}?payment=success`,
     cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/sponsor/competitions/${competitionId}?payment=cancelled`,
   });
 
-  // Store the checkout session ID
-  await db
-    .update(payments)
-    .set({
-      stripeCheckoutSessionId: session.id,
-      updatedAt: new Date(),
-    })
-    .where(eq(payments.id, payment.id));
-
   if (!session.url) {
     throw new Error("Stripe did not return a checkout session URL");
   }
+
+  // Create payment record after successful Stripe session creation
+  await db.insert(payments).values({
+    organizationId,
+    competitionId,
+    amount,
+    currency,
+    status: "pending",
+    description: `Competition listing fee`,
+    stripeCheckoutSessionId: session.id,
+  });
 
   return session.url;
 }
@@ -88,38 +76,48 @@ export async function handleWebhookEvent(event: Stripe.Event): Promise<void> {
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
-
       const competitionId = session.metadata?.competitionId;
-      const paymentId = session.metadata?.paymentId;
 
-      if (!paymentId) {
-        console.error("Stripe webhook: missing paymentId in metadata");
+      // Look up payment by Stripe session ID
+      const [payment] = await db
+        .select({ id: payments.id, status: payments.status })
+        .from(payments)
+        .where(eq(payments.stripeCheckoutSessionId, session.id));
+
+      if (!payment) {
+        console.error("Stripe webhook: no payment record for session", session.id);
         return;
       }
 
-      // Update payment status to completed
-      await db
-        .update(payments)
-        .set({
-          status: "completed",
-          stripePaymentIntentId:
-            typeof session.payment_intent === "string"
-              ? session.payment_intent
-              : session.payment_intent?.id ?? null,
-          updatedAt: new Date(),
-        })
-        .where(eq(payments.id, paymentId));
+      // Idempotency — skip if already processed
+      if (payment.status === "completed") {
+        return;
+      }
 
-      // Update competition status to pending_review
-      if (competitionId) {
-        await db
-          .update(competitions)
+      // Atomically update payment + competition status
+      await db.transaction(async (tx) => {
+        await tx
+          .update(payments)
           .set({
-            status: "pending_review",
+            status: "completed",
+            stripePaymentIntentId:
+              typeof session.payment_intent === "string"
+                ? session.payment_intent
+                : session.payment_intent?.id ?? null,
             updatedAt: new Date(),
           })
-          .where(eq(competitions.id, competitionId));
-      }
+          .where(eq(payments.id, payment.id));
+
+        if (competitionId) {
+          await tx
+            .update(competitions)
+            .set({
+              status: "pending_review",
+              updatedAt: new Date(),
+            })
+            .where(eq(competitions.id, competitionId));
+        }
+      });
 
       break;
     }

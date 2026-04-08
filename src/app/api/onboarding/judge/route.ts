@@ -6,6 +6,7 @@ import { eq, and } from "drizzle-orm";
 import { resolveOnboardingUser } from "@/lib/auth/resolve-onboarding-user";
 import { NextResponse } from "next/server";
 import { z } from "zod/v4";
+import { apiError } from "@/lib/api-error";
 
 const judgeOnboardingSchema = z.object({
   expertise: z.string().min(2),
@@ -116,9 +117,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Judge onboarding error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal server error" },
-      { status: 500 }
-    );
+    return apiError(error, "Internal server error");
   }
 }

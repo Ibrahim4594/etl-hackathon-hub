@@ -183,7 +183,7 @@ export default async function StudentDashboardPage() {
   ];
   if (joinedCompIds.length > 0) {
     discoverConditions.push(
-      sql`${competitions.id} NOT IN (${sql.join(joinedCompIds.map(id => sql`${id}`), sql`, `)})`
+      notInArray(competitions.id, joinedCompIds)
     );
   }
   const discoverCompetitions = await db

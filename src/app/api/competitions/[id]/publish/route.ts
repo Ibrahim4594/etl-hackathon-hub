@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { triggerEvent } from "@/lib/services/pusher";
 import { channels, EVENTS } from "@/lib/services/pusher-channels";
+import { apiError } from "@/lib/api-error";
 
 /**
  * POST /api/competitions/[id]/publish
@@ -122,9 +123,6 @@ export async function POST(
     return NextResponse.json({ competition: updated });
   } catch (error) {
     console.error("POST /api/competitions/[id]/publish error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to publish competition" },
-      { status: 500 }
-    );
+    return apiError(error, "Failed to publish competition");
   }
 }

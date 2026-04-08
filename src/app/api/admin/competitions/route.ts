@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { triggerEvent } from "@/lib/services/pusher";
 import { channels, EVENTS } from "@/lib/services/pusher-channels";
 import { createNotification } from "@/lib/services/notification";
+import { apiError } from "@/lib/api-error";
 
 export async function PATCH(req: Request) {
   try {
@@ -121,9 +122,6 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ competition: updated });
   } catch (error) {
     console.error("PATCH /api/admin/competitions error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to update competition" },
-      { status: 500 }
-    );
+    return apiError(error, "Failed to update competition");
   }
 }

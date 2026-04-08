@@ -7,6 +7,7 @@ import { z } from "zod/v4";
 import { triggerEvent } from "@/lib/services/pusher";
 import { channels, EVENTS } from "@/lib/services/pusher-channels";
 import type { ParticipantTeamUpdatePayload } from "@/lib/services/pusher-channels";
+import { apiError } from "@/lib/api-error";
 
 const joinByCodeSchema = z.object({
   inviteCode: z.string().min(1),
@@ -100,9 +101,6 @@ export async function POST(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("POST /api/teams/[id]/invite error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to join team" },
-      { status: 500 }
-    );
+    return apiError(error, "Failed to join team");
   }
 }

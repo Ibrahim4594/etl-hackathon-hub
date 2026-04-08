@@ -32,8 +32,8 @@ export async function POST(req: Request) {
     return new Response("Missing svix headers", { status: 400 });
   }
 
-  const payload = await req.json();
-  const body = JSON.stringify(payload);
+  const body = await req.text();
+  const payload = JSON.parse(body);
 
   const wh = new Webhook(WEBHOOK_SECRET);
 
@@ -76,9 +76,6 @@ export async function POST(req: Request) {
     }
 
     case "user.updated": {
-      const role = data.public_metadata?.role as string | undefined;
-      const onboardingComplete = data.public_metadata?.onboardingComplete as boolean | undefined;
-
       await db
         .update(users)
         .set({
@@ -86,8 +83,6 @@ export async function POST(req: Request) {
           firstName: data.first_name,
           lastName: data.last_name,
           imageUrl: data.image_url,
-          ...(role && { role: role as "student" | "sponsor" | "judge" | "admin" }),
-          ...(onboardingComplete !== undefined && { onboardingComplete }),
           updatedAt: new Date(),
         })
         .where(eq(users.clerkId, data.id));
@@ -95,7 +90,10 @@ export async function POST(req: Request) {
     }
 
     case "user.deleted": {
-      await db.delete(users).where(eq(users.clerkId, data.id));
+      await db
+        .update(users)
+        .set({ deletedAt: new Date() })
+        .where(eq(users.clerkId, data.id));
       break;
     }
   }

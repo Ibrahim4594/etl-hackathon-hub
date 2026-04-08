@@ -5,6 +5,7 @@ import { eq, and, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { triggerEvent } from "@/lib/services/pusher";
 import { channels, EVENTS } from "@/lib/services/pusher-channels";
+import { apiError } from "@/lib/api-error";
 
 export async function POST(req: Request) {
   try {
@@ -96,9 +97,6 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error("POST /api/teams/join error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to join team" },
-      { status: 500 }
-    );
+    return apiError(error, "Failed to join team");
   }
 }

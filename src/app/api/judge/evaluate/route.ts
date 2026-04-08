@@ -13,6 +13,7 @@ import { eq, and } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { triggerEvent } from "@/lib/services/pusher";
 import { channels, EVENTS } from "@/lib/services/pusher-channels";
+import { apiError } from "@/lib/api-error";
 
 /**
  * POST /api/judge/evaluate
@@ -224,9 +225,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, evaluation });
   } catch (error) {
     console.error("POST /api/judge/evaluate error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to evaluate submission" },
-      { status: 500 }
-    );
+    return apiError(error, "Failed to evaluate submission");
   }
 }

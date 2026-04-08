@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { users, teams, teamMembers } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { apiError } from "@/lib/api-error";
 
 export async function GET(
   req: Request,
@@ -33,10 +34,7 @@ export async function GET(
     return NextResponse.json({ members });
   } catch (error) {
     console.error("GET /api/teams/[id]/members error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch team members" },
-      { status: 500 }
-    );
+    return apiError(error, "Failed to fetch team members");
   }
 }
 
@@ -80,9 +78,6 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("DELETE /api/teams/[id]/members error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to remove team member" },
-      { status: 500 }
-    );
+    return apiError(error, "Failed to remove team member");
   }
 }

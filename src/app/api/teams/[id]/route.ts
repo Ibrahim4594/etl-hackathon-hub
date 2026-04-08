@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { users, teams, teamMembers } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { apiError } from "@/lib/api-error";
 
 export async function GET(
   req: Request,
@@ -38,9 +39,6 @@ export async function GET(
     return NextResponse.json({ team, members });
   } catch (error) {
     console.error("GET /api/teams/[id] error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch team" },
-      { status: 500 }
-    );
+    return apiError(error, "Failed to fetch team");
   }
 }

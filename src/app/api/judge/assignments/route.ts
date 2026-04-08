@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { users, competitions, judgeAssignments } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { apiError } from "@/lib/api-error";
 
 export async function GET() {
   try {
@@ -58,9 +59,6 @@ export async function GET() {
     return NextResponse.json({ assignments: enriched });
   } catch (error) {
     console.error("Judge assignments endpoint error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch judge assignments" },
-      { status: 500 }
-    );
+    return apiError(error, "Failed to fetch judge assignments");
   }
 }
