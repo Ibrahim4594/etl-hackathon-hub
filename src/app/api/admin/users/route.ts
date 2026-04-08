@@ -66,7 +66,7 @@ export async function PATCH(req: Request) {
     // Sync role to Clerk metadata
     try {
       const client = await clerkClient();
-      await client.users.updateUser(updated.clerkId, {
+      await client.users.updateUserMetadata(updated.clerkId, {
         publicMetadata: { role },
       });
     } catch (clerkErr) {

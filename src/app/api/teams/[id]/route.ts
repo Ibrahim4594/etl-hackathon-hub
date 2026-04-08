@@ -1,7 +1,7 @@
 import { serverAuth } from "@/lib/auth/server-auth";
 import { db } from "@/lib/db";
 import { users, teams, teamMembers, competitions, organizations } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { apiError } from "@/lib/api-error";
 
@@ -31,7 +31,7 @@ export async function GET(
       const [membership] = await db
         .select({ id: teamMembers.id })
         .from(teamMembers)
-        .where(eq(teamMembers.teamId, id));
+        .where(and(eq(teamMembers.teamId, id), eq(teamMembers.userId, dbUser.id)));
 
       const isMember = membership !== undefined;
 

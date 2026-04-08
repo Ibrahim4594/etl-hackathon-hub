@@ -9,6 +9,7 @@ const isPublicRoute = createRouteMatcher([
   "/invite(.*)",
   "/api/webhooks(.*)",
   "/api/invite(.*)",
+  ...(process.env.NODE_ENV !== "production" ? ["/api/dev(.*)"] : []),
 ]);
 
 const isOnboardingRoute = createRouteMatcher(["/onboarding(.*)"]);
