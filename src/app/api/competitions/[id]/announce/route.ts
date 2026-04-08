@@ -13,6 +13,11 @@ import { triggerEvent } from "@/lib/services/pusher";
 import { channels, EVENTS } from "@/lib/services/pusher-channels";
 import { createNotification } from "@/lib/services/notification";
 import { apiError } from "@/lib/api-error";
+import { z } from "zod/v4";
+
+const announceSchema = z.object({
+  winnerIds: z.array(z.string().uuid()).max(20).optional(),
+});
 
 /**
  * POST /api/competitions/[id]/announce
@@ -74,7 +79,11 @@ export async function POST(
     }
 
     const body = await req.json();
-    const { winnerIds } = body as { winnerIds?: string[] };
+    const parsed = announceSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid data", issues: parsed.error.issues }, { status: 400 });
+    }
+    const { winnerIds } = parsed.data;
 
     // Get ranked submissions
     const rankedSubs = await db

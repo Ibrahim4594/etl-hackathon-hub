@@ -1,7 +1,7 @@
 import { clerkClient } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 
 /**
  * Resolves a DB user for onboarding routes.
@@ -15,7 +15,7 @@ export async function resolveOnboardingUser(clerkId: string) {
   const [byClerkId] = await db
     .select()
     .from(users)
-    .where(eq(users.clerkId, clerkId));
+    .where(and(eq(users.clerkId, clerkId), isNull(users.deletedAt)));
 
   if (byClerkId) return byClerkId;
 
@@ -39,7 +39,7 @@ export async function resolveOnboardingUser(clerkId: string) {
   const [byEmail] = await db
     .select()
     .from(users)
-    .where(eq(users.email, email));
+    .where(and(eq(users.email, email), isNull(users.deletedAt)));
 
   if (byEmail) {
     await db

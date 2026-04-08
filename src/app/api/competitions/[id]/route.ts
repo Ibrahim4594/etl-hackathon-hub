@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { competitions, organizations, users, competitionSponsors } from "@/lib/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { apiError } from "@/lib/api-error";
 
 export async function GET(
   req: Request,
@@ -49,6 +50,7 @@ export async function GET(
       createdAt: competitions.createdAt,
       updatedAt: competitions.updatedAt,
       organizationId: competitions.organizationId,
+      createdBy: competitions.createdBy,
       organizationName: organizations.name,
       organizationLogo: organizations.logoUrl,
       organizationSlug: organizations.slug,
@@ -60,6 +62,21 @@ export async function GET(
 
   if (!competition) {
     return NextResponse.json({ error: "Competition not found" }, { status: 404 });
+  }
+
+  // Draft and pending_review competitions are only visible to their creator or admin
+  if (competition.status === "draft" || competition.status === "pending_review") {
+    const { userId } = await serverAuth();
+    if (!userId) {
+      return NextResponse.json({ error: "Competition not found" }, { status: 404 });
+    }
+    const [dbUser] = await db
+      .select({ id: users.id, role: users.role })
+      .from(users)
+      .where(eq(users.clerkId, userId));
+    if (!dbUser || (dbUser.role !== "admin" && competition.createdBy !== dbUser.id)) {
+      return NextResponse.json({ error: "Competition not found" }, { status: 404 });
+    }
   }
 
   const sponsors = await db
@@ -92,8 +109,8 @@ export async function PATCH(
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  if (dbUser.role !== "sponsor") {
-    return NextResponse.json({ error: "Only organizers can edit competitions" }, { status: 403 });
+  if (dbUser.role !== "sponsor" && dbUser.role !== "admin") {
+    return NextResponse.json({ error: "Only organizers or admins can edit competitions" }, { status: 403 });
   }
 
   // Fetch the competition and verify ownership
@@ -106,7 +123,8 @@ export async function PATCH(
     return NextResponse.json({ error: "Competition not found" }, { status: 404 });
   }
 
-  if (competition.createdBy !== dbUser.id) {
+  // Sponsors must own the competition; admins can edit any
+  if (dbUser.role === "sponsor" && competition.createdBy !== dbUser.id) {
     return NextResponse.json({ error: "You do not own this competition" }, { status: 403 });
   }
 

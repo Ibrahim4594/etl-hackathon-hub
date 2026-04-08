@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { InviteJudgeDialog } from "@/components/judge/invite-judge-dialog";
 import { PublishButton } from "@/components/competitions/publish-button";
-import { QuickPublishButton } from "@/components/competitions/quick-publish-button";
 import { GoLiveButton } from "@/components/competitions/go-live-button";
 import { AnnounceWinnersDialog } from "@/components/competitions/announce-winners-dialog";
 import {
@@ -201,9 +200,6 @@ export function CompetitionDetailTabs({
                     </Link>
                   )}
                   {isDraft && <PublishButton competitionId={c.id} />}
-                  {(isDraft || c.status === "pending_review") && (
-                    <QuickPublishButton competitionId={c.id} />
-                  )}
                 </>
               )}
               {c.status === "approved" && (

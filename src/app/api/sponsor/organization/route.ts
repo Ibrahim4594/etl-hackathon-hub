@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { organizations } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { ensureDbUser } from "@/lib/auth/ensure-db-user";
+import { resolveOnboardingUser } from "@/lib/auth/resolve-onboarding-user";
 import { z } from "zod/v4";
 import { apiError } from "@/lib/api-error";
 
@@ -24,7 +24,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const dbUser = await ensureDbUser(userId);
+    const dbUser = await resolveOnboardingUser(userId);
     if (!dbUser || dbUser.role !== "sponsor") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

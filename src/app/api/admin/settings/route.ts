@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { platformSettings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { serverAuth } from "@/lib/auth/server-auth";
-import { ensureDbUser } from "@/lib/auth/ensure-db-user";
+import { resolveOnboardingUser } from "@/lib/auth/resolve-onboarding-user";
 import { NextResponse } from "next/server";
 import { apiError } from "@/lib/api-error";
 
@@ -24,7 +24,7 @@ export async function GET() {
     const { userId } = await serverAuth();
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const dbUser = await ensureDbUser(userId);
+    const dbUser = await resolveOnboardingUser(userId);
     if (!dbUser || dbUser.role !== "admin") {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
@@ -48,7 +48,7 @@ export async function PATCH(req: Request) {
     const { userId } = await serverAuth();
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const dbUser = await ensureDbUser(userId);
+    const dbUser = await resolveOnboardingUser(userId);
     if (!dbUser || dbUser.role !== "admin") {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }

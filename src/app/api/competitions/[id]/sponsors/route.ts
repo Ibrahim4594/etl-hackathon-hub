@@ -12,7 +12,20 @@ export async function GET(
   const { id } = await params;
 
   const sponsors = await db
-    .select()
+    .select({
+      id: competitionSponsors.id,
+      competitionId: competitionSponsors.competitionId,
+      companyName: competitionSponsors.companyName,
+      logoUrl: competitionSponsors.logoUrl,
+      website: competitionSponsors.website,
+      contributionType: competitionSponsors.contributionType,
+      contributionTitle: competitionSponsors.contributionTitle,
+      contributionDescription: competitionSponsors.contributionDescription,
+      sponsorTier: competitionSponsors.sponsorTier,
+      displayOrder: competitionSponsors.displayOrder,
+      featured: competitionSponsors.featured,
+      isOrganizer: competitionSponsors.isOrganizer,
+    })
     .from(competitionSponsors)
     .where(eq(competitionSponsors.competitionId, id))
     .orderBy(asc(competitionSponsors.displayOrder));
@@ -98,6 +111,20 @@ export async function DELETE(
   const [dbUser] = await db.select().from(users).where(eq(users.clerkId, userId));
   if (!dbUser || (dbUser.role !== "sponsor" && dbUser.role !== "admin")) {
     return NextResponse.json({ error: "Only organizers or admins can remove sponsors" }, { status: 403 });
+  }
+
+  // Sponsors must own the competition; admins can delete from any
+  if (dbUser.role === "sponsor") {
+    const [competition] = await db
+      .select({ createdBy: competitions.createdBy })
+      .from(competitions)
+      .where(eq(competitions.id, id));
+    if (!competition) {
+      return NextResponse.json({ error: "Competition not found" }, { status: 404 });
+    }
+    if (competition.createdBy !== dbUser.id) {
+      return NextResponse.json({ error: "You do not own this competition" }, { status: 403 });
+    }
   }
 
   const { searchParams } = new URL(req.url);

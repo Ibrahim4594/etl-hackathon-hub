@@ -7,7 +7,7 @@ import {
   submissions,
   judgeEvaluations,
 } from "@/lib/db/schema";
-import { eq, and, count, sql } from "drizzle-orm";
+import { eq, and, count, sql, inArray } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { resolveOnboardingUser } from "@/lib/auth/resolve-onboarding-user";
 import Link from "next/link";
@@ -52,36 +52,45 @@ export default async function JudgeAssignmentsPage() {
     .innerJoin(organizations, eq(competitions.organizationId, organizations.id))
     .where(eq(judgeAssignments.judgeId, dbUser.id));
 
-  // For each assignment, get submission count and evaluation progress
-  const assignmentsWithCounts = await Promise.all(
-    assignments.map(async (assignment) => {
-      const [submissionCount] = await db
-        .select({ value: count() })
-        .from(submissions)
-        .where(eq(submissions.competitionId, assignment.competitionId));
+  // Batch queries for submission counts and evaluation progress
+  const competitionIds = assignments.map((a) => a.competitionId);
+  const submissionCountMap = new Map<string, number>();
+  const evaluatedCountMap = new Map<string, number>();
 
-      const [evaluatedCount] = await db
-        .select({ value: count() })
+  if (competitionIds.length > 0) {
+    const [submissionCounts, evaluatedCounts] = await Promise.all([
+      db
+        .select({ competitionId: submissions.competitionId, value: count() })
+        .from(submissions)
+        .where(inArray(submissions.competitionId, competitionIds))
+        .groupBy(submissions.competitionId),
+      db
+        .select({ competitionId: submissions.competitionId, value: count() })
         .from(judgeEvaluations)
         .innerJoin(submissions, eq(judgeEvaluations.submissionId, submissions.id))
         .where(
           and(
             eq(judgeEvaluations.judgeId, dbUser.id),
-            eq(submissions.competitionId, assignment.competitionId)
+            inArray(submissions.competitionId, competitionIds)
           )
-        );
+        )
+        .groupBy(submissions.competitionId),
+    ]);
 
-      const total = submissionCount?.value ?? 0;
-      const evaluated = evaluatedCount?.value ?? 0;
+    for (const s of submissionCounts) submissionCountMap.set(s.competitionId, Number(s.value));
+    for (const e of evaluatedCounts) evaluatedCountMap.set(e.competitionId, Number(e.value));
+  }
 
-      return {
-        ...assignment,
-        submissionCount: total,
-        evaluatedCount: evaluated,
-        progress: total > 0 ? Math.round((evaluated / total) * 100) : 0,
-      };
-    })
-  );
+  const assignmentsWithCounts = assignments.map((assignment) => {
+    const total = submissionCountMap.get(assignment.competitionId) ?? 0;
+    const evaluated = evaluatedCountMap.get(assignment.competitionId) ?? 0;
+    return {
+      ...assignment,
+      submissionCount: total,
+      evaluatedCount: evaluated,
+      progress: total > 0 ? Math.round((evaluated / total) * 100) : 0,
+    };
+  });
 
   const statusColors: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
     active: "default",

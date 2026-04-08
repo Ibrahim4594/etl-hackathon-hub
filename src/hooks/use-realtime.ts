@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import PusherClient from "pusher-js";
 
 let pusherInstance: PusherClient | null = null;
+const channelRefCounts = new Map<string, number>();
 
 function getPusherClient(): PusherClient {
   if (!pusherInstance) {
@@ -28,7 +29,11 @@ export function useRealtime(
 
   useEffect(() => {
     const pusher = getPusherClient();
-    const channelInstance = pusher.subscribe(channel);
+
+    // Increment ref count; subscribe only on first ref
+    const refCount = (channelRefCounts.get(channel) ?? 0) + 1;
+    channelRefCounts.set(channel, refCount);
+    const channelInstance = refCount === 1 ? pusher.subscribe(channel) : pusher.channel(channel);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handler = (data: any) => {
@@ -39,7 +44,13 @@ export function useRealtime(
 
     return () => {
       channelInstance.unbind(event, handler);
-      pusher.unsubscribe(channel);
+      const remaining = (channelRefCounts.get(channel) ?? 1) - 1;
+      if (remaining <= 0) {
+        channelRefCounts.delete(channel);
+        pusher.unsubscribe(channel);
+      } else {
+        channelRefCounts.set(channel, remaining);
+      }
     };
   }, [channel, event]);
 }

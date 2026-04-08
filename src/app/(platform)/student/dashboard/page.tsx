@@ -73,81 +73,90 @@ export default async function StudentDashboardPage() {
     redirect(dbUser.role ? `/${dbUser.role}/dashboard` : "/onboarding");
   }
 
-  // Teams + competitions with org name
-  const memberships = await db
-    .select({
-      teamId: teamMembers.teamId,
-      teamName: teams.name,
-      teamRole: teamMembers.role,
-      inviteCode: teams.inviteCode,
-      competitionId: competitions.id,
-      competitionTitle: competitions.title,
-      competitionSlug: competitions.slug,
-      competitionStatus: competitions.status,
-      submissionEnd: competitions.submissionEnd,
-      registrationEnd: competitions.registrationEnd,
-      resultsDate: competitions.resultsDate,
-      totalPrizePool: competitions.totalPrizePool,
-      tagline: competitions.tagline,
-      orgName: organizations.name,
-    })
-    .from(teamMembers)
-    .innerJoin(teams, eq(teamMembers.teamId, teams.id))
-    .innerJoin(competitions, eq(teams.competitionId, competitions.id))
-    .innerJoin(
-      organizations,
-      eq(competitions.organizationId, organizations.id)
-    )
-    .where(eq(teamMembers.userId, dbUser.id))
-    .orderBy(desc(competitions.createdAt));
-
-  // Recent submissions (5)
-  const recentSubmissions = await db
-    .select({
-      id: submissions.id,
-      title: submissions.title,
-      status: submissions.status,
-      aiScore: submissions.aiScore,
-      finalScore: submissions.finalScore,
-      rank: submissions.rank,
-      createdAt: submissions.createdAt,
-      competitionTitle: competitions.title,
-    })
-    .from(submissions)
-    .innerJoin(competitions, eq(submissions.competitionId, competitions.id))
-    .where(eq(submissions.submittedBy, dbUser.id))
-    .orderBy(desc(submissions.createdAt))
-    .limit(5);
-
-  // Total submission count
-  const [{ total }] = await db
-    .select({ total: sql<number>`count(*)` })
-    .from(submissions)
-    .where(eq(submissions.submittedBy, dbUser.id));
-  const totalSubmissionsCount = Number(total);
-
-  // Wins count
-  const [{ wins }] = await db
-    .select({ wins: sql<number>`count(*)` })
-    .from(submissions)
-    .where(
-      and(
-        eq(submissions.submittedBy, dbUser.id),
-        eq(submissions.status, "winner")
+  // Parallelize independent queries
+  const [
+    memberships,
+    recentSubmissions,
+    [{ total }],
+    [{ wins }],
+    submissionsByComp,
+  ] = await Promise.all([
+    // Teams + competitions with org name
+    db
+      .select({
+        teamId: teamMembers.teamId,
+        teamName: teams.name,
+        teamRole: teamMembers.role,
+        inviteCode: teams.inviteCode,
+        competitionId: competitions.id,
+        competitionTitle: competitions.title,
+        competitionSlug: competitions.slug,
+        competitionStatus: competitions.status,
+        submissionEnd: competitions.submissionEnd,
+        registrationEnd: competitions.registrationEnd,
+        resultsDate: competitions.resultsDate,
+        totalPrizePool: competitions.totalPrizePool,
+        tagline: competitions.tagline,
+        orgName: organizations.name,
+      })
+      .from(teamMembers)
+      .innerJoin(teams, eq(teamMembers.teamId, teams.id))
+      .innerJoin(competitions, eq(teams.competitionId, competitions.id))
+      .innerJoin(
+        organizations,
+        eq(competitions.organizationId, organizations.id)
       )
-    );
-  const winsCount = Number(wins);
+      .where(eq(teamMembers.userId, dbUser.id))
+      .orderBy(desc(competitions.createdAt)),
 
-  // Check submission status per competition
-  const submissionsByComp = await db
-    .select({
-      competitionId: submissions.competitionId,
-      status: submissions.status,
-    })
-    .from(submissions)
-    .innerJoin(teams, eq(submissions.teamId, teams.id))
-    .innerJoin(teamMembers, eq(teamMembers.teamId, teams.id))
-    .where(eq(teamMembers.userId, dbUser.id));
+    // Recent submissions (5)
+    db
+      .select({
+        id: submissions.id,
+        title: submissions.title,
+        status: submissions.status,
+        aiScore: submissions.aiScore,
+        finalScore: submissions.finalScore,
+        rank: submissions.rank,
+        createdAt: submissions.createdAt,
+        competitionTitle: competitions.title,
+      })
+      .from(submissions)
+      .innerJoin(competitions, eq(submissions.competitionId, competitions.id))
+      .where(eq(submissions.submittedBy, dbUser.id))
+      .orderBy(desc(submissions.createdAt))
+      .limit(5),
+
+    // Total submission count
+    db
+      .select({ total: sql<number>`count(*)` })
+      .from(submissions)
+      .where(eq(submissions.submittedBy, dbUser.id)),
+
+    // Wins count
+    db
+      .select({ wins: sql<number>`count(*)` })
+      .from(submissions)
+      .where(
+        and(
+          eq(submissions.submittedBy, dbUser.id),
+          eq(submissions.status, "winner")
+        )
+      ),
+
+    // Submission status per competition
+    db
+      .select({
+        competitionId: submissions.competitionId,
+        status: submissions.status,
+      })
+      .from(submissions)
+      .innerJoin(teams, eq(submissions.teamId, teams.id))
+      .innerJoin(teamMembers, eq(teamMembers.teamId, teams.id))
+      .where(eq(teamMembers.userId, dbUser.id)),
+  ]);
+  const totalSubmissionsCount = Number(total);
+  const winsCount = Number(wins);
 
   const submissionStatusMap = new Map(
     submissionsByComp.map((s) => [s.competitionId, s.status])

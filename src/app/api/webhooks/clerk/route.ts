@@ -69,6 +69,7 @@ export async function POST(req: Request) {
             firstName: data.first_name,
             lastName: data.last_name,
             imageUrl: data.image_url,
+            deletedAt: null,
             updatedAt: new Date(),
           },
         });
