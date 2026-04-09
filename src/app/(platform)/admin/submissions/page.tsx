@@ -20,6 +20,7 @@ import {
 import { FileText, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
 import { SubmissionStatusFilter } from "./submission-status-filter";
 import Link from "next/link";
+import { getSubmissionStatusLabel } from "@/lib/constants/status-colors";
 
 function formatDate(date: Date | null): string {
   if (!date) return "-";
@@ -42,18 +43,6 @@ const statusVariant: Record<string, "default" | "secondary" | "outline" | "destr
   winner: "default",
 };
 
-const statusLabel: Record<string, string> = {
-  submitted: "Submitted",
-  validating: "Validating",
-  valid: "Valid",
-  invalid: "Invalid",
-  flagged: "Flagged",
-  ai_evaluated: "AI Evaluated",
-  judged: "Judged",
-  finalist: "Finalist",
-  winner: "Winner",
-};
-
 const PAGE_SIZE = 50;
 
 interface PageProps {
@@ -72,7 +61,8 @@ export default async function AdminSubmissionsPage({ searchParams }: PageProps) 
 
   const { status: filterStatus, page: pageParam } = await searchParams;
   const activeFilter = filterStatus || "all";
-  const currentPage = Math.max(1, parseInt(pageParam || "1", 10));
+  const parsed = parseInt(pageParam || "1", 10);
+  const currentPage = Math.max(1, Number.isNaN(parsed) ? 1 : parsed);
 
   const offset = (currentPage - 1) * PAGE_SIZE;
   const statusWhere = activeFilter !== "all" ? eq(submissions.status, activeFilter as "submitted" | "validating" | "valid" | "invalid" | "flagged" | "ai_evaluated" | "judged" | "finalist" | "winner") : undefined;
@@ -151,7 +141,7 @@ export default async function AdminSubmissionsPage({ searchParams }: PageProps) 
           description={
             activeFilter === "all"
               ? "No submissions have been made yet."
-              : `No submissions with status "${statusLabel[activeFilter] ?? activeFilter}".`
+              : `No submissions with status "${getSubmissionStatusLabel(activeFilter)}".`
           }
         />
       ) : (
@@ -190,7 +180,7 @@ export default async function AdminSubmissionsPage({ searchParams }: PageProps) 
                   </TableCell>
                   <TableCell>
                     <Badge variant={statusVariant[sub.status] ?? "outline"}>
-                      {statusLabel[sub.status] ?? sub.status}
+                      {getSubmissionStatusLabel(sub.status)}
                     </Badge>
                   </TableCell>
                   <TableCell>{formatScore(sub.aiScore)}</TableCell>
@@ -208,7 +198,7 @@ export default async function AdminSubmissionsPage({ searchParams }: PageProps) 
           <p className="text-sm text-muted-foreground">
             Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filteredCount)} of{" "}
             {filteredCount} submission{filteredCount !== 1 ? "s" : ""}
-            {activeFilter !== "all" && ` with status "${statusLabel[activeFilter] ?? activeFilter}"`}
+            {activeFilter !== "all" && ` with status "${getSubmissionStatusLabel(activeFilter)}"`}
           </p>
 
           {totalPages > 1 && (

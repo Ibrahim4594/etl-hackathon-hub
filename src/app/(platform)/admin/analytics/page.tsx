@@ -155,8 +155,8 @@ export default async function AdminAnalyticsPage() {
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
-              title="Draft"
-              value={statusMap["draft"] ?? 0}
+              title="Pending Review"
+              value={(statusMap["pending_review"] ?? 0) + (statusMap["draft"] ?? 0)}
               icon={FileText}
             />
             <StatCard

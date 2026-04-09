@@ -58,7 +58,7 @@ export async function PATCH(req: Request) {
       );
     }
 
-    const newStatus = action === "approve" ? "approved" : "cancelled";
+    const newStatus = action === "approve" ? "approved" : "cancelled"; // "cancelled" = rejected in UI
 
     const [updated] = await db
       .update(competitions)

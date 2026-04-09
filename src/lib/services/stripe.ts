@@ -117,7 +117,7 @@ export async function handleWebhookEvent(event: Stripe.Event): Promise<void> {
             })
             .where(and(
               eq(competitions.id, competitionId),
-              eq(competitions.status, "draft")  // Only update if still draft
+              eq(competitions.status, "pending_review")  // Only update if still pending
             ));
         }
       });

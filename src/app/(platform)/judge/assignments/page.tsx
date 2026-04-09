@@ -96,7 +96,6 @@ export default async function JudgeAssignmentsPage() {
     active: "default",
     judging: "secondary",
     completed: "outline",
-    draft: "outline",
     cancelled: "destructive",
   };
 

@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { FileText, Trophy, Calendar, Zap, Users, Star, ArrowRight, Rocket } from "lucide-react";
 import Link from "next/link";
-import { SUBMISSION_STATUS_COLORS, formatStatus } from "@/lib/constants/status-colors";
+import { SUBMISSION_STATUS_COLORS, getSubmissionStatusLabel } from "@/lib/constants/status-colors";
 
 function formatDate(date: Date): string {
   return new Intl.DateTimeFormat("en-PK", { dateStyle: "medium" }).format(
@@ -220,7 +220,7 @@ export default async function StudentSubmissionsPage() {
                         "border-border bg-muted text-muted-foreground"
                       }`}
                     >
-                      {formatStatus(s.status)}
+                      {getSubmissionStatusLabel(s.status)}
                     </span>
 
                     {(s.aiScore !== null ||

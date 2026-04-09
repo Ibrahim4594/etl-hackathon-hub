@@ -13,9 +13,10 @@ interface DateFieldProps {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  error?: string;
 }
 
-function DateField({ id, label, value, onChange }: DateFieldProps) {
+function DateField({ id, label, value, onChange, error }: DateFieldProps) {
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>
@@ -25,6 +26,7 @@ function DateField({ id, label, value, onChange }: DateFieldProps) {
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
+      {error && <p className="text-xs text-destructive mt-1">{error}</p>}
     </div>
   );
 }
@@ -39,7 +41,7 @@ interface TimelinePhase {
 }
 
 export function StepTimeline() {
-  const { formData, updateFormData } = useCompetitionForm();
+  const { formData, updateFormData, stepErrors } = useCompetitionForm();
 
   const phases: TimelinePhase[] = [
     {
@@ -107,12 +109,14 @@ export function StepTimeline() {
                 label="Registration Opens"
                 value={formData.registrationStart ?? ""}
                 onChange={(val) => updateFormData({ registrationStart: val })}
+                error={stepErrors.registrationStart}
               />
               <DateField
                 id="registrationEnd"
                 label="Registration Closes"
                 value={formData.registrationEnd ?? ""}
                 onChange={(val) => updateFormData({ registrationEnd: val })}
+                error={stepErrors.registrationEnd}
               />
             </div>
           </div>
@@ -131,12 +135,14 @@ export function StepTimeline() {
                 label="Submission Opens"
                 value={formData.submissionStart ?? ""}
                 onChange={(val) => updateFormData({ submissionStart: val })}
+                error={stepErrors.submissionStart}
               />
               <DateField
                 id="submissionEnd"
                 label="Submission Deadline"
                 value={formData.submissionEnd ?? ""}
                 onChange={(val) => updateFormData({ submissionEnd: val })}
+                error={stepErrors.submissionEnd}
               />
             </div>
           </div>
@@ -155,12 +161,14 @@ export function StepTimeline() {
                 label="Judging Begins"
                 value={formData.judgingStart ?? ""}
                 onChange={(val) => updateFormData({ judgingStart: val })}
+                error={stepErrors.judgingStart}
               />
               <DateField
                 id="judgingEnd"
                 label="Judging Ends"
                 value={formData.judgingEnd ?? ""}
                 onChange={(val) => updateFormData({ judgingEnd: val })}
+                error={stepErrors.judgingEnd}
               />
             </div>
           </div>

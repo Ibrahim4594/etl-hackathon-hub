@@ -11,7 +11,7 @@ interface WizardShellProps {
 }
 
 export function WizardShell({ children }: WizardShellProps) {
-  const { currentStep, setStep } = useCompetitionForm();
+  const { currentStep, setStep, validateStep } = useCompetitionForm();
   const totalSteps = WIZARD_STEPS.length;
   const isFirstStep = currentStep === 0;
   const isLastStep = currentStep === totalSteps - 1;
@@ -29,10 +29,11 @@ export function WizardShell({ children }: WizardShellProps) {
               <div key={step} className="flex flex-1 items-center">
                 <button
                   type="button"
-                  onClick={() => setStep(index)}
+                  onClick={() => index < currentStep && setStep(index)}
+                  disabled={index > currentStep}
                   className={cn(
                     "flex flex-col items-center gap-1.5 group",
-                    index <= currentStep ? "cursor-pointer" : "cursor-pointer"
+                    index < currentStep ? "cursor-pointer" : "cursor-default"
                   )}
                 >
                   <div
@@ -94,7 +95,7 @@ export function WizardShell({ children }: WizardShellProps) {
         </span>
 
         {!isLastStep && (
-          <Button onClick={() => setStep(currentStep + 1)}>
+          <Button onClick={() => { if (validateStep()) setStep(currentStep + 1); }}>
             Next
             <ChevronRight className="size-4" />
           </Button>

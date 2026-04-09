@@ -23,7 +23,7 @@ import {
   Trophy,
 } from "lucide-react";
 import Link from "next/link";
-import { SUBMISSION_STATUS_COLORS, formatStatus } from "@/lib/constants/status-colors";
+import { SUBMISSION_STATUS_COLORS, getSubmissionStatusLabel } from "@/lib/constants/status-colors";
 import { AssignSubmissionDialog } from "@/components/submissions/assign-submission-dialog";
 
 type FilterTab = "all" | "valid" | "flagged" | "invalid" | "finalists" | "winners";
@@ -82,7 +82,7 @@ export default async function SponsorSubmissionsPage({
     .where(eq(competitions.id, id));
 
   if (!competition) notFound();
-  if (competition.createdBy !== dbUser.id) redirect("/sponsor/competitions");
+  if (dbUser.role !== "admin" && competition.createdBy !== dbUser.id) redirect("/sponsor/competitions");
 
   // Fetch all submissions for this competition
   const allSubmissions = await db
@@ -252,7 +252,7 @@ export default async function SponsorSubmissionsPage({
               <p className="mt-1 text-sm text-muted-foreground">
                 {activeFilter === "all"
                   ? "No teams have submitted yet."
-                  : `No submissions with status "${activeFilter}".`}
+                  : `No ${activeFilter === "finalists" ? "finalists" : activeFilter === "winners" ? "winners" : getSubmissionStatusLabel(activeFilter).toLowerCase()} submissions found.`}
               </p>
             </div>
           ) : (
@@ -278,7 +278,12 @@ export default async function SponsorSubmissionsPage({
                       className="transition-colors hover:bg-muted/50"
                     >
                       <td className="px-4 py-3">
-                        {sub.title}
+                        <Link
+                          href={`/sponsor/competitions/${id}/submissions/${sub.id}`}
+                          className="font-medium hover:text-primary transition-colors"
+                        >
+                          {sub.title}
+                        </Link>
                       </td>
                       <td className="px-4 py-3 text-sm text-muted-foreground">
                         {sub.teamName}
@@ -291,7 +296,7 @@ export default async function SponsorSubmissionsPage({
                           {sub.status === "winner" && (
                             <Trophy className="mr-1 h-3 w-3" />
                           )}
-                          {formatStatus(sub.status)}
+                          {getSubmissionStatusLabel(sub.status)}
                         </Badge>
                       </td>
                       <td className="px-4 py-3 text-right text-sm tabular-nums">

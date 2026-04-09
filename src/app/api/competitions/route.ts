@@ -246,7 +246,7 @@ export async function POST(req: Request) {
           prizeConfirmed: data.prizeConfirmed,
           visibility: data.visibility || "public",
           accessCode: data.accessCode || null,
-          status: "draft",
+          status: "pending_review",
         })
         .returning();
 

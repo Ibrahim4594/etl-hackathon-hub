@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { CompetitionCreateInput } from "@/lib/validators/competition";
+import { stepSchemas } from "@/lib/validators/competition";
 
 export const WIZARD_STEPS = [
   "basic-info",
@@ -74,19 +75,50 @@ const initialFormData: CompetitionCreateInput = {
 interface CompetitionFormState {
   currentStep: number;
   formData: CompetitionCreateInput;
+  stepErrors: Record<string, string>;
   setStep: (step: number) => void;
   updateFormData: (data: Partial<CompetitionCreateInput>) => void;
+  validateStep: () => boolean;
   reset: () => void;
 }
 
-export const useCompetitionForm = create<CompetitionFormState>((set) => ({
+export const useCompetitionForm = create<CompetitionFormState>((set, get) => ({
   currentStep: 0,
   formData: { ...initialFormData },
+  stepErrors: {},
   setStep: (step) =>
-    set({ currentStep: Math.max(0, Math.min(step, WIZARD_STEPS.length - 1)) }),
+    set({ currentStep: Math.max(0, Math.min(step, WIZARD_STEPS.length - 1)), stepErrors: {} }),
   updateFormData: (data) =>
-    set((state) => ({
-      formData: { ...state.formData, ...data },
-    })),
-  reset: () => set({ currentStep: 0, formData: { ...initialFormData } }),
+    set((state) => {
+      const updatedErrors = { ...state.stepErrors };
+      for (const key of Object.keys(data)) {
+        delete updatedErrors[key];
+      }
+      return {
+        formData: { ...state.formData, ...data },
+        stepErrors: updatedErrors,
+      };
+    }),
+  validateStep: () => {
+    const { currentStep, formData } = get();
+    const stepName = WIZARD_STEPS[currentStep];
+    const schema = stepSchemas[stepName];
+    if (!schema) {
+      set({ stepErrors: {} });
+      return true;
+    }
+    const result = schema.safeParse(formData);
+    if (result.success) {
+      set({ stepErrors: {} });
+      return true;
+    }
+    const errors: Record<string, string> = {};
+    for (const issue of result.error.issues) {
+      const key = issue.path.length > 0 ? String(issue.path.join(".")) : "_form";
+      if (!errors[key]) errors[key] = issue.message;
+    }
+    set({ stepErrors: errors });
+    return false;
+  },
+  reset: () => set({ currentStep: 0, formData: { ...initialFormData }, stepErrors: {} }),
 }));

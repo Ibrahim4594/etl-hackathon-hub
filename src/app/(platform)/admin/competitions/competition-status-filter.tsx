@@ -6,13 +6,12 @@ import { cn } from "@/lib/utils";
 
 const STATUSES = [
   { value: "all", label: "All" },
-  { value: "draft", label: "Draft" },
   { value: "pending_review", label: "Pending Review" },
   { value: "approved", label: "Approved" },
   { value: "active", label: "Active" },
   { value: "judging", label: "Judging" },
   { value: "completed", label: "Completed" },
-  { value: "cancelled", label: "Cancelled" },
+  { value: "cancelled", label: "Rejected" },
 ] as const;
 
 interface CompetitionStatusFilterProps {

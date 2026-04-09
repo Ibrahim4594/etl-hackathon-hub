@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Gavel, Users } from "lucide-react";
 import Link from "next/link";
 import { InviteJudgeDialog } from "@/components/judge/invite-judge-dialog";
+import { AutoAssignButton } from "@/components/competitions/auto-assign-button";
 
 export default async function SponsorJudgesPage({
   params,
@@ -46,7 +47,7 @@ export default async function SponsorJudgesPage({
     .where(eq(competitions.id, id));
 
   if (!competition) notFound();
-  if (competition.createdBy !== dbUser.id) redirect("/sponsor/competitions");
+  if (dbUser.role !== "admin" && competition.createdBy !== dbUser.id) redirect("/sponsor/competitions");
 
   // Count total submissions for this competition
   const [subCountResult] = await db
@@ -70,6 +71,7 @@ export default async function SponsorJudgesPage({
         INNER JOIN ${submissions} ON ${judgeEvaluations.submissionId} = ${submissions.id}
         WHERE ${judgeEvaluations.judgeId} = ${users.id}
           AND ${submissions.competitionId} = ${competitions.id}
+          AND ${judgeEvaluations.compositeScore} IS NOT NULL
       )`,
     })
     .from(judgeAssignments)
@@ -92,7 +94,10 @@ export default async function SponsorJudgesPage({
             <p className="text-sm text-muted-foreground">{competition.title}</p>
           </div>
         </div>
-        <InviteJudgeDialog competitionId={id} />
+        <div className="flex items-center gap-2">
+          <InviteJudgeDialog competitionId={id} />
+          <AutoAssignButton competitionId={id} judgesCount={assignedJudges.length} />
+        </div>
       </div>
 
       {/* Stats Row */}

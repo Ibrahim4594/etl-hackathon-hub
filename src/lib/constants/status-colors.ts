@@ -11,17 +11,15 @@ export const COMPETITION_STATUS_CONFIG: Record<string, {
   label: string;
   dot?: boolean;
 }> = {
-  draft: { color: "text-zinc-400", bg: "bg-zinc-500/10", border: "border-zinc-500/20", label: "Draft" },
-  pending_review: { color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20", label: "In Review" },
+  pending_review: { color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20", label: "Pending Review" },
   approved: { color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20", label: "Approved" },
   active: { color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20", label: "Live", dot: true },
   judging: { color: "text-purple-400", bg: "bg-purple-500/10", border: "border-purple-500/20", label: "Judging", dot: true },
   completed: { color: "text-zinc-400", bg: "bg-zinc-500/10", border: "border-zinc-500/20", label: "Completed" },
-  cancelled: { color: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/20", label: "Cancelled" },
+  cancelled: { color: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/20", label: "Rejected" },
 };
 
 export const COMPETITION_STATUS_COLORS: Record<string, string> = {
-  draft: "bg-zinc-500/10 text-zinc-500 border-zinc-500/20",
   pending_review: "bg-amber-500/10 text-amber-500 border-amber-500/20",
   approved: "bg-blue-500/10 text-blue-400 border-blue-500/20",
   active: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
@@ -42,6 +40,18 @@ export const SUBMISSION_STATUS_COLORS: Record<string, string> = {
   winner: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
 };
 
+export const SUBMISSION_STATUS_LABELS: Record<string, string> = {
+  submitted: "Pending Review",
+  validating: "Under Review",
+  valid: "Approved",
+  invalid: "Rejected",
+  flagged: "Flagged",
+  ai_evaluated: "AI Evaluated",
+  judged: "Judged",
+  finalist: "Finalist",
+  winner: "Winner",
+};
+
 export function formatStatus(status: string): string {
   return status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
@@ -52,4 +62,8 @@ export function getCompetitionStatusColor(status: string): string {
 
 export function getSubmissionStatusColor(status: string): string {
   return SUBMISSION_STATUS_COLORS[status] ?? "bg-muted text-muted-foreground border-border";
+}
+
+export function getSubmissionStatusLabel(status: string): string {
+  return SUBMISSION_STATUS_LABELS[status] ?? formatStatus(status);
 }

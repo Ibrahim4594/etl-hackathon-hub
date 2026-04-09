@@ -88,7 +88,7 @@ export const competitions = pgTable("competitions", {
   prizeConfirmed: boolean("prize_confirmed").default(false).notNull(),
 
   // Status
-  status: hackathonStatusEnum("status").default("draft").notNull(),
+  status: hackathonStatusEnum("status").default("pending_review").notNull(),
   publishedAt: timestamp("published_at"),
   featured: boolean("featured").default(false).notNull(),
   visibility: competitionVisibilityEnum("visibility").default("public").notNull(),

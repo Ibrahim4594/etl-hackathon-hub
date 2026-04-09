@@ -56,6 +56,7 @@ export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  try {
   const { id } = await params;
 
   const [competition] = await db
@@ -112,7 +113,7 @@ export async function GET(
   }
 
   // Draft and pending_review competitions are only visible to their creator or admin
-  if (competition.status === "draft" || competition.status === "pending_review") {
+  if (competition.status === "pending_review" || competition.status === "draft") {
     const { userId } = await serverAuth();
     if (!userId) {
       return NextResponse.json({ error: "Competition not found" }, { status: 404 });
@@ -133,12 +134,16 @@ export async function GET(
     .orderBy(asc(competitionSponsors.displayOrder));
 
   return NextResponse.json({ competition, sponsors });
+  } catch (error) {
+    return apiError(error, "Failed to fetch competition");
+  }
 }
 
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  try {
   const { id } = await params;
 
   const { userId } = await serverAuth();
@@ -175,9 +180,9 @@ export async function PATCH(
     return NextResponse.json({ error: "You do not own this competition" }, { status: 403 });
   }
 
-  if (competition.status !== "draft") {
+  if (competition.status !== "pending_review" && competition.status !== "draft") {
     return NextResponse.json(
-      { error: "Only draft competitions can be edited" },
+      { error: "Only pending review competitions can be edited" },
       { status: 400 }
     );
   }
@@ -188,6 +193,44 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid request body", issues: parsed.error.issues }, { status: 400 });
   }
   const body = parsed.data;
+
+  // Date ordering validation — merge incoming dates with current competition dates
+  const resolveDate = (incoming: string | null | undefined, current: Date | null): Date | null => {
+    if (incoming === null || incoming === "") return null;
+    if (incoming !== undefined) {
+      const d = new Date(incoming);
+      if (isNaN(d.getTime())) return null;
+      return d;
+    }
+    return current;
+  };
+  const md = {
+    registrationStart: resolveDate(body.registrationStart, competition.registrationStart),
+    registrationEnd: resolveDate(body.registrationEnd, competition.registrationEnd),
+    submissionStart: resolveDate(body.submissionStart, competition.submissionStart),
+    submissionEnd: resolveDate(body.submissionEnd, competition.submissionEnd),
+    judgingStart: resolveDate(body.judgingStart, competition.judgingStart),
+    judgingEnd: resolveDate(body.judgingEnd, competition.judgingEnd),
+    resultsDate: resolveDate(body.resultsDate, competition.resultsDate),
+  };
+  if (md.registrationStart && md.registrationEnd && md.registrationEnd <= md.registrationStart) {
+    return NextResponse.json({ error: "Registration end must be after registration start" }, { status: 400 });
+  }
+  if (md.registrationEnd && md.submissionStart && md.submissionStart < md.registrationEnd) {
+    return NextResponse.json({ error: "Submission start must be after registration ends" }, { status: 400 });
+  }
+  if (md.submissionStart && md.submissionEnd && md.submissionEnd <= md.submissionStart) {
+    return NextResponse.json({ error: "Submission end must be after submission start" }, { status: 400 });
+  }
+  if (md.submissionEnd && md.judgingStart && md.judgingStart < md.submissionEnd) {
+    return NextResponse.json({ error: "Judging cannot start before submission closes" }, { status: 400 });
+  }
+  if (md.judgingStart && md.judgingEnd && md.judgingEnd <= md.judgingStart) {
+    return NextResponse.json({ error: "Judging end must be after judging start" }, { status: 400 });
+  }
+  if (md.judgingEnd && md.resultsDate && md.resultsDate < md.judgingEnd) {
+    return NextResponse.json({ error: "Results date must be after judging ends" }, { status: 400 });
+  }
 
   const dateFields = [
     "registrationStart",
@@ -275,12 +318,16 @@ export async function PATCH(
   });
 
   return NextResponse.json({ competition: result });
+  } catch (error) {
+    return apiError(error, "Failed to update competition");
+  }
 }
 
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  try {
   const { id } = await params;
 
   const { userId } = await serverAuth();
@@ -317,9 +364,9 @@ export async function DELETE(
       return NextResponse.json({ error: "Not authorized to delete this hackathon" }, { status: 403 });
     }
 
-    if (!["draft", "cancelled"].includes(competition.status)) {
+    if (!["draft", "pending_review", "cancelled"].includes(competition.status)) {
       return NextResponse.json(
-        { error: "Only draft or cancelled hackathons can be deleted" },
+        { error: "Only pending review or rejected competitions can be deleted" },
         { status: 400 }
       );
     }
@@ -328,4 +375,7 @@ export async function DELETE(
   await db.delete(competitions).where(eq(competitions.id, id));
 
   return NextResponse.json({ success: true });
+  } catch (error) {
+    return apiError(error, "Failed to delete competition");
+  }
 }

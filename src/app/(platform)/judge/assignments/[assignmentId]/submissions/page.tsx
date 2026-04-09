@@ -1,7 +1,6 @@
 import { serverAuth } from "@/lib/auth/server-auth";
 import { db } from "@/lib/db";
 import {
-  users,
   judgeAssignments,
   competitions,
   organizations,
@@ -11,6 +10,7 @@ import {
 } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { redirect, notFound } from "next/navigation";
+import { resolveOnboardingUser } from "@/lib/auth/resolve-onboarding-user";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, FileText, CheckCircle2, Clock, ArrowRight } from "lucide-react";
-import { SUBMISSION_STATUS_COLORS, formatStatus } from "@/lib/constants/status-colors";
+import { SUBMISSION_STATUS_COLORS, getSubmissionStatusLabel } from "@/lib/constants/status-colors";
 
 export default async function AssignmentSubmissionsPage({
   params,
@@ -29,11 +29,9 @@ export default async function AssignmentSubmissionsPage({
   const { userId: clerkId } = await serverAuth();
   if (!clerkId) redirect("/sign-in");
 
-  const [dbUser] = await db
-    .select()
-    .from(users)
-    .where(eq(users.clerkId, clerkId));
-  if (!dbUser || (dbUser.role !== "judge" && dbUser.role !== "admin")) redirect("/onboarding");
+  const dbUser = await resolveOnboardingUser(clerkId);
+  if (!dbUser || !dbUser.onboardingComplete) redirect("/onboarding");
+  if (dbUser.role !== "judge" && dbUser.role !== "admin") redirect("/onboarding");
 
   // Fetch the assignment
   const [assignment] = await db
@@ -70,13 +68,16 @@ export default async function AssignmentSubmissionsPage({
     .innerJoin(teams, eq(submissions.teamId, teams.id))
     .where(eq(submissions.competitionId, assignment.competitionId));
 
-  // Fetch this judge's evaluations for quick lookup
+  // Fetch this judge's evaluations to determine which submissions are assigned to them
   const myEvaluations = await db
     .select({ submissionId: judgeEvaluations.submissionId })
     .from(judgeEvaluations)
     .where(eq(judgeEvaluations.judgeId, dbUser.id));
 
   const evaluatedIds = new Set(myEvaluations.map((e) => e.submissionId));
+
+  // Only show submissions specifically assigned to this judge
+  const assignedSubmissions = allSubmissions.filter((sub) => evaluatedIds.has(sub.id));
 
   return (
     <div className="space-y-8">
@@ -92,27 +93,32 @@ export default async function AssignmentSubmissionsPage({
         />
       </div>
 
-      {allSubmissions.length === 0 ? (
+      {assignedSubmissions.length === 0 ? (
         <EmptyState
           icon={FileText}
-          title="No submissions yet"
-          description="No teams have submitted to this competition yet. Check back later."
+          title="No submissions assigned"
+          description="No submissions have been assigned to you for this competition yet. Contact the organizer if you believe this is an error."
         />
       ) : (
         <div className="space-y-3">
-          {allSubmissions.map((sub) => {
+          {assignedSubmissions.map((sub) => {
             const evaluated = evaluatedIds.has(sub.id);
             return (
               <Card key={sub.id} className="border-border/50">
                 <CardContent className="flex flex-wrap items-center justify-between gap-4 p-4">
                   <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium truncate">{sub.title}</span>
+                      <Link
+                          href={`/judge/evaluate/${sub.id}`}
+                          className="font-medium truncate hover:text-primary transition-colors"
+                        >
+                          {sub.title}
+                        </Link>
                       <Badge
                         variant="outline"
                         className={`shrink-0 text-[10px] font-semibold ${SUBMISSION_STATUS_COLORS[sub.status] ?? ""}`}
                       >
-                        {formatStatus(sub.status)}
+                        {getSubmissionStatusLabel(sub.status)}
                       </Badge>
                       {evaluated ? (
                         <Badge className="shrink-0 bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px]">

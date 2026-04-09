@@ -19,7 +19,7 @@ const TARGET_LABELS: Record<string, { label: string; emoji: string }> = {
 };
 
 export function StepParticipationRules() {
-  const { formData, updateFormData } = useCompetitionForm();
+  const { formData, updateFormData, stepErrors } = useCompetitionForm();
 
   type TargetOption = (typeof targetParticipantOptions)[number];
 
@@ -64,15 +64,20 @@ export function StepParticipationRules() {
               id="minTeamSize"
               type="number"
               min={1}
-              max={10}
+              max={50}
               value={formData.minTeamSize}
-              onChange={(e) =>
-                updateFormData({ minTeamSize: parseInt(e.target.value) || 1 })
-              }
+              onChange={(e) => {
+                const val = Math.max(1, Math.min(50, parseInt(e.target.value) || 1));
+                updateFormData({
+                  minTeamSize: val,
+                  ...(val > 1 ? { allowSoloParticipation: false } : {}),
+                });
+              }}
             />
             <p className="text-xs text-muted-foreground">
-              Minimum number of members per team
+              Minimum number of members per team (1–50)
             </p>
+            {stepErrors.minTeamSize && <p className="text-xs text-destructive mt-1">{stepErrors.minTeamSize}</p>}
           </div>
 
           <div className="space-y-2">
@@ -81,15 +86,17 @@ export function StepParticipationRules() {
               id="maxTeamSize"
               type="number"
               min={1}
-              max={10}
+              max={50}
               value={formData.maxTeamSize}
-              onChange={(e) =>
-                updateFormData({ maxTeamSize: parseInt(e.target.value) || 4 })
-              }
+              onChange={(e) => {
+                const val = Math.max(1, Math.min(50, parseInt(e.target.value) || 4));
+                updateFormData({ maxTeamSize: val });
+              }}
             />
             <p className="text-xs text-muted-foreground">
-              Maximum number of members per team
+              Maximum number of members per team (1–50)
             </p>
+            {stepErrors.maxTeamSize && <p className="text-xs text-destructive mt-1">{stepErrors.maxTeamSize}</p>}
           </div>
         </div>
 
@@ -114,37 +121,46 @@ export function StepParticipationRules() {
         </div>
 
         {/* Allow Solo Participation */}
-        <div className="flex items-center justify-between rounded-lg border p-4">
-          <div className="space-y-0.5">
-            <Label htmlFor="allowSolo" className="cursor-pointer">
-              Allow Solo Participation
-            </Label>
-            <p className="text-xs text-muted-foreground">
-              Allow individuals to participate without forming a team
-            </p>
-          </div>
-          <button
-            id="allowSolo"
-            type="button"
-            role="switch"
-            aria-checked={formData.allowSoloParticipation}
-            onClick={() =>
-              updateFormData({ allowSoloParticipation: !formData.allowSoloParticipation })
-            }
-            className={`
-              relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent
-              transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
-              ${formData.allowSoloParticipation ? "bg-primary" : "bg-muted-foreground/30"}
-            `}
-          >
-            <span
-              className={`
-                pointer-events-none inline-block size-5 rounded-full bg-background shadow-lg ring-0 transition-transform
-                ${formData.allowSoloParticipation ? "translate-x-5" : "translate-x-0"}
-              `}
-            />
-          </button>
-        </div>
+        {(() => {
+          const soloDisabled = formData.minTeamSize > 1;
+          return (
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <Label htmlFor="allowSolo" className={soloDisabled ? "text-muted-foreground" : "cursor-pointer"}>
+                  Allow Solo Participation
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {soloDisabled
+                    ? "Automatically disabled when minimum team size is greater than 1"
+                    : "Allow individuals to participate without forming a team"}
+                </p>
+              </div>
+              <button
+                id="allowSolo"
+                type="button"
+                role="switch"
+                aria-checked={formData.allowSoloParticipation}
+                disabled={soloDisabled}
+                onClick={() =>
+                  !soloDisabled && updateFormData({ allowSoloParticipation: !formData.allowSoloParticipation })
+                }
+                className={`
+                  relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent
+                  transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
+                  ${soloDisabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}
+                  ${formData.allowSoloParticipation ? "bg-primary" : "bg-muted-foreground/30"}
+                `}
+              >
+                <span
+                  className={`
+                    pointer-events-none inline-block size-5 rounded-full bg-background shadow-lg ring-0 transition-transform
+                    ${formData.allowSoloParticipation ? "translate-x-5" : "translate-x-0"}
+                  `}
+                />
+              </button>
+            </div>
+          );
+        })()}
 
         {/* Eligibility Criteria */}
         <div className="space-y-2">

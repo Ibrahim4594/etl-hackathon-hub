@@ -59,7 +59,7 @@ function generateAccessCode(): string {
 }
 
 export function StepBasicInfo() {
-  const { formData, updateFormData } = useCompetitionForm();
+  const { formData, updateFormData, stepErrors } = useCompetitionForm();
   const [tagInput, setTagInput] = useState("");
   const [dbTags, setDbTags] = useState<string[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -162,6 +162,7 @@ export function StepBasicInfo() {
           <p className="text-xs text-muted-foreground">
             {formData.title.length}/100 characters
           </p>
+          {stepErrors.title && <p className="text-xs text-destructive mt-1">{stepErrors.title}</p>}
         </div>
 
         {/* Tagline */}
@@ -194,6 +195,7 @@ export function StepBasicInfo() {
           <p className="text-xs text-muted-foreground">
             {formData.description.length} characters (minimum 50)
           </p>
+          {stepErrors.description && <p className="text-xs text-destructive mt-1">{stepErrors.description}</p>}
         </div>
 
         {/* Category */}

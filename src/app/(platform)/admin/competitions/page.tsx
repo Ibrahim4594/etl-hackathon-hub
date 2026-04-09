@@ -34,7 +34,6 @@ function formatDate(date: Date | null): string {
 }
 
 const statusVariant: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
-  draft: "outline",
   pending_review: "secondary",
   approved: "default",
   active: "default",
@@ -44,13 +43,12 @@ const statusVariant: Record<string, "default" | "secondary" | "outline" | "destr
 };
 
 const statusLabel: Record<string, string> = {
-  draft: "Draft",
   pending_review: "Pending Review",
   approved: "Approved",
   active: "Active",
   judging: "Judging",
   completed: "Completed",
-  cancelled: "Cancelled",
+  cancelled: "Rejected",
 };
 
 const PAGE_SIZE = 50;

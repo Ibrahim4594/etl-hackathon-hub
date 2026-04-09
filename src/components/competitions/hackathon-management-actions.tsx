@@ -29,7 +29,7 @@ export function HackathonManagementActions({
   const [loading, setLoading] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  const canDelete = status === "draft" || status === "cancelled";
+  const canDelete = status === "pending_review" || status === "cancelled" || status === "draft";
   const canUnpublish = status === "active" || status === "approved";
 
   async function handleDelete() {
@@ -57,14 +57,14 @@ export function HackathonManagementActions({
       const res = await fetch(`/api/competitions/${competitionId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "draft" }),
+        body: JSON.stringify({ status: "pending_review" }),
       });
       const data = await res.json();
       if (!res.ok) {
         toast.error(data.error || "Failed to unpublish hackathon");
         return;
       }
-      toast.success("Hackathon unpublished and set back to draft");
+      toast.success("Hackathon unpublished and sent back for review");
       router.refresh();
     } finally {
       setLoading(null);

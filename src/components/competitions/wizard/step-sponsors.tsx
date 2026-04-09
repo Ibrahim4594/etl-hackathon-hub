@@ -177,6 +177,22 @@ export function StepSponsors() {
                   <div className="flex items-center gap-3">
                     <GripVertical className="size-4 shrink-0 text-muted-foreground/40" />
 
+                    {/* Logo thumbnail */}
+                    {sponsor.logoUrl ? (
+                      <div className="size-7 shrink-0 overflow-hidden rounded border bg-muted">
+                        <img
+                          src={sponsor.logoUrl}
+                          alt={sponsor.companyName || "logo"}
+                          className="size-7 object-contain"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex size-7 shrink-0 items-center justify-center rounded border bg-muted">
+                        <Building2 className="size-4 text-muted-foreground" />
+                      </div>
+                    )}
+
                     <div className="flex flex-1 items-center gap-2 min-w-0">
                       <span className="font-medium truncate">
                         {sponsor.companyName || "Untitled Sponsor"}

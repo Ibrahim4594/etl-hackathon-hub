@@ -10,6 +10,7 @@ import {
   users,
   judgeAssignments,
   judgeEvaluations,
+  competitionSponsors,
 } from "@/lib/db/schema";
 import { eq, count, sql } from "drizzle-orm";
 import { resolveOnboardingUser } from "@/lib/auth/resolve-onboarding-user";
@@ -59,13 +60,30 @@ export default async function SponsorCompetitionDetailPage({
       aiJudgingWeight: competitions.aiJudgingWeight,
       humanJudgingWeight: competitions.humanJudgingWeight,
       tags: competitions.tags,
+      prizes: competitions.prizes,
+      submissionRequirements: competitions.submissionRequirements,
+      judgingCriteria: competitions.judgingCriteria,
     })
     .from(competitions)
     .innerJoin(organizations, eq(competitions.organizationId, organizations.id))
     .where(eq(competitions.id, id));
 
   if (!competition) notFound();
-  if (competition.createdBy !== dbUser.id) redirect("/sponsor/competitions");
+  if (dbUser.role !== "admin" && competition.createdBy !== dbUser.id) redirect("/sponsor/competitions");
+
+  // Fetch sponsors for this competition
+  const competitionSponsorsData = await db
+    .select({
+      id: competitionSponsors.id,
+      companyName: competitionSponsors.companyName,
+      logoUrl: competitionSponsors.logoUrl,
+      sponsorTier: competitionSponsors.sponsorTier,
+      contributionType: competitionSponsors.contributionType,
+      contributionTitle: competitionSponsors.contributionTitle,
+      isOrganizer: competitionSponsors.isOrganizer,
+    })
+    .from(competitionSponsors)
+    .where(eq(competitionSponsors.competitionId, id));
 
   // Fetch submissions with team names
   const competitionSubmissions = await db
@@ -175,6 +193,9 @@ export default async function SponsorCompetitionDetailPage({
         aiJudgingWeight: competition.aiJudgingWeight,
         humanJudgingWeight: competition.humanJudgingWeight,
         tags: (competition.tags as string[]) ?? [],
+        prizes: (competition.prizes as { position: number; title: string; amount: number; currency: string; description?: string }[]) ?? [],
+        submissionRequirements: competition.submissionRequirements as { githubRequired: boolean; videoRequired: boolean; deployedUrlRequired: boolean; pitchDeckRequired: boolean; maxScreenshots: number } | null,
+        judgingCriteria: (competition.judgingCriteria as { name: string; description: string; weight: number; maxScore: number }[]) ?? [],
       }}
       submissions={competitionSubmissions.map((s) => ({
         ...s,
@@ -184,6 +205,7 @@ export default async function SponsorCompetitionDetailPage({
         ...j,
         assignedAt: j.assignedAt.toISOString(),
       }))}
+      sponsors={competitionSponsorsData}
       statusCounts={statusCounts}
       totalTeams={teamCountResult?.count ?? 0}
       totalParticipants={participantResult?.count ?? 0}

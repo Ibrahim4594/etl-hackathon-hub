@@ -4,7 +4,7 @@ export const judgingCriterionSchema = z.object({
   name: z.string().min(1),
   description: z.string(),
   weight: z.number().min(0).max(100),
-  maxScore: z.number().min(1).max(10),
+  maxScore: z.number().min(1).max(100),
 });
 
 export const prizeSchema = z.object({
@@ -81,7 +81,7 @@ export type CompetitionSponsorInput = z.infer<typeof competitionSponsorSchema>;
 export const competitionCreateSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters").max(100),
   tagline: z.string().max(150).optional(),
-  description: z.string().min(10, "Description must be at least 10 characters"),
+  description: z.string().min(50, "Description must be at least 50 characters"),
   category: z.string().optional(),
   tags: z.array(
     z.string().trim().max(30, "Each tag must be 30 characters or less").transform(s => s.toLowerCase())
@@ -91,8 +91,8 @@ export const competitionCreateSchema = z.object({
   challengeStatement: z.string().optional(),
   requirements: z.string().optional(),
   resources: z.array(z.object({ title: z.string(), url: z.string() })).default([]),
-  minTeamSize: z.number().min(1).max(10).default(1),
-  maxTeamSize: z.number().min(1).max(10).default(4),
+  minTeamSize: z.number().min(1).max(50).default(1),
+  maxTeamSize: z.number().min(1).max(50).default(4),
   maxParticipants: z.number().min(1).optional(),
   allowSoloParticipation: z.boolean().default(true),
   eligibilityCriteria: z.string().optional(),
@@ -119,3 +119,67 @@ export const competitionCreateSchema = z.object({
 });
 
 export type CompetitionCreateInput = z.infer<typeof competitionCreateSchema>;
+
+// Per-step validation schemas — only validates fields relevant to each step
+export const stepSchemas: Partial<Record<string, z.ZodTypeAny>> = {
+  "basic-info": z.object({
+    title: z.string().min(3, "Title must be at least 3 characters").max(100, "Title must be 100 characters or less"),
+    description: z.string().min(50, "Description must be at least 50 characters"),
+  }),
+
+  "participation-rules": z
+    .object({
+      minTeamSize: z.number().min(1, "Min team size must be at least 1").max(50, "Max team size is 50"),
+      maxTeamSize: z.number().min(1, "Max team size must be at least 1").max(50, "Max team size is 50"),
+    })
+    .refine((d) => d.maxTeamSize >= d.minTeamSize, {
+      message: "Max team size must be ≥ min team size",
+      path: ["maxTeamSize"],
+    }),
+
+  timeline: z
+    .object({
+      registrationStart: z.string().min(1, "Registration start is required"),
+      registrationEnd: z.string().min(1, "Registration end is required"),
+      submissionStart: z.string().min(1, "Submission start is required"),
+      submissionEnd: z.string().min(1, "Submission end is required"),
+      judgingStart: z.string().min(1, "Judging start is required"),
+      judgingEnd: z.string().min(1, "Judging end is required"),
+    })
+    .refine(
+      (d) => !d.registrationEnd || !d.registrationStart || d.registrationEnd > d.registrationStart,
+      { message: "Registration end must be after registration start", path: ["registrationEnd"] }
+    )
+    .refine(
+      (d) => !d.submissionStart || !d.registrationEnd || d.submissionStart >= d.registrationEnd,
+      { message: "Submission start must be after registration ends", path: ["submissionStart"] }
+    )
+    .refine(
+      (d) => !d.submissionEnd || !d.submissionStart || d.submissionEnd > d.submissionStart,
+      { message: "Submission end must be after submission start", path: ["submissionEnd"] }
+    )
+    .refine(
+      (d) => !d.judgingStart || !d.submissionEnd || d.judgingStart >= d.submissionEnd,
+      { message: "Judging cannot start before submission closes", path: ["judgingStart"] }
+    )
+    .refine(
+      (d) => !d.judgingEnd || !d.judgingStart || d.judgingEnd > d.judgingStart,
+      { message: "Judging end must be after judging start", path: ["judgingEnd"] }
+    ),
+
+  "judging-config": z
+    .object({
+      aiJudgingWeight: z.number().min(0).max(100),
+      humanJudgingWeight: z.number().min(0).max(100),
+      finalistCount: z.number().min(1, "Must have at least 1 finalist"),
+      maxParticipants: z.number().min(1).optional(),
+    })
+    .refine((d) => d.aiJudgingWeight + d.humanJudgingWeight === 100, {
+      message: "AI and human weights must sum to 100%",
+      path: ["aiJudgingWeight"],
+    })
+    .refine((d) => !d.maxParticipants || d.finalistCount <= d.maxParticipants, {
+      message: "Number of finalists cannot exceed maximum participants",
+      path: ["finalistCount"],
+    }),
+};

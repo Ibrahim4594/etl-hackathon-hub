@@ -39,7 +39,6 @@ import { OrganizerRealtimeOverlay } from "@/components/realtime/organizer-realti
 import { COMPETITION_STATUS_COLORS, formatStatus } from "@/lib/constants/status-colors";
 
 const STATUS_GRADIENT: Record<string, string> = {
-  draft: "from-zinc-500/20 to-zinc-500/5",
   pending_review: "from-amber-500/20 to-amber-500/5",
   approved: "from-blue-500/20 to-blue-500/5",
   active: "from-emerald-500/20 to-emerald-500/5",

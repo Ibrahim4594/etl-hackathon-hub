@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useCompetitionForm } from "@/hooks/use-competition-form";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -55,6 +56,8 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
 
 export function StepReview() {
   const { formData, reset } = useCompetitionForm();
+  const searchParams = useSearchParams();
+  const editId = searchParams.get("edit");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -95,8 +98,11 @@ export function StepReview() {
         totalPrizePool,
       };
 
-      const response = await fetch("/api/competitions", {
-        method: "POST",
+      const url = editId ? `/api/competitions/${editId}` : "/api/competitions";
+      const method = editId ? "PATCH" : "POST";
+
+      const response = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
@@ -116,7 +122,7 @@ export function StepReview() {
       }
 
       setSubmitSuccess(true);
-      reset();
+      if (!editId) reset();
     } catch (err) {
       setSubmitError(
         err instanceof Error ? err.message : "Something went wrong"
@@ -131,10 +137,13 @@ export function StepReview() {
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-16">
           <CheckCircle className="size-16 text-primary" />
-          <h2 className="mt-4 text-xl font-semibold">Competition Created!</h2>
+          <h2 className="mt-4 text-xl font-semibold">
+            {editId ? "Competition Updated!" : "Competition Created!"}
+          </h2>
           <p className="mt-2 text-sm text-muted-foreground text-center max-w-md">
-            Your competition has been submitted for review. You will be notified
-            once it is approved and published.
+            {editId
+              ? "Your changes have been saved successfully."
+              : "Your competition has been submitted for review. You will be notified once it is approved and published."}
           </p>
         </CardContent>
       </Card>
@@ -456,19 +465,19 @@ export function StepReview() {
             {isSubmitting ? (
               <>
                 <Loader2 className="size-4 animate-spin" />
-                Submitting...
+                {editId ? "Saving..." : "Submitting..."}
               </>
             ) : (
               <>
                 <Send className="size-4" />
-                Submit Competition for Review
+                {editId ? "Save Changes" : "Submit Competition for Review"}
               </>
             )}
           </Button>
 
           <p className="mt-3 text-center text-xs text-muted-foreground">
-            Your competition will be submitted as a draft and reviewed by an admin
-            before going live.
+            Your competition will be submitted for review. An admin will review
+            and approve it before it goes live.
           </p>
         </CardContent>
       </Card>

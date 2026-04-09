@@ -126,7 +126,7 @@ export default async function SponsorCompetitionsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {sponsorCompetitions.map((comp) => {
-            const cfg = COMPETITION_STATUS_CONFIG[comp.status] ?? COMPETITION_STATUS_CONFIG.draft;
+            const cfg = COMPETITION_STATUS_CONFIG[comp.status] ?? COMPETITION_STATUS_CONFIG.pending_review;
             const subs = subCounts[comp.id] ?? 0;
             const tms = teamCounts[comp.id] ?? 0;
             const deadlineDate = comp.submissionEnd;
@@ -202,9 +202,6 @@ export default async function SponsorCompetitionsPage() {
                     competitionSlug={comp.slug ?? ""}
                     status={comp.status}
                   />
-                  {comp.status === "draft" && (
-                    <PublishButton competitionId={comp.id} />
-                  )}
                   {comp.status === "approved" && (
                     <GoLiveButton competitionId={comp.id} size="sm" />
                   )}

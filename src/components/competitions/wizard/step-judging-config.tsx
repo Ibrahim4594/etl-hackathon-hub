@@ -12,13 +12,14 @@ import { Scale, Plus, Trash2, Bot, UserCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function StepJudgingConfig() {
-  const { formData, updateFormData } = useCompetitionForm();
+  const { formData, updateFormData, stepErrors } = useCompetitionForm();
 
   const addCriterion = () => {
+    if (formData.judgingCriteria.length >= 5) return;
     updateFormData({
       judgingCriteria: [
         ...formData.judgingCriteria,
-        { name: "", description: "", weight: 0, maxScore: 10 },
+        { name: "", description: "", weight: 0, maxScore: 100 },
       ],
     });
   };
@@ -147,6 +148,9 @@ export function StepJudgingConfig() {
                   ? "Weights sum to 100%"
                   : `Weights must sum to 100% (currently ${formData.aiJudgingWeight + formData.humanJudgingWeight}%)`}
               </p>
+              {stepErrors.aiJudgingWeight && (
+                <p className="text-xs text-destructive mt-1">{stepErrors.aiJudgingWeight}</p>
+              )}
             </div>
           </div>
 
@@ -164,7 +168,11 @@ export function StepJudgingConfig() {
             />
             <p className="text-xs text-muted-foreground">
               How many top submissions advance to the finalist round for human judging.
+              {formData.maxParticipants ? ` Cannot exceed maximum participants (${formData.maxParticipants}).` : ""}
             </p>
+            {stepErrors.finalistCount && (
+              <p className="text-xs text-destructive mt-1">{stepErrors.finalistCount}</p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -252,10 +260,10 @@ export function StepJudgingConfig() {
                         id={`criterion-max-${index}`}
                         type="number"
                         min={1}
-                        max={10}
+                        max={100}
                         value={criterion.maxScore}
                         onChange={(e) =>
-                          updateCriterion(index, "maxScore", parseInt(e.target.value) || 10)
+                          updateCriterion(index, "maxScore", parseInt(e.target.value) || 100)
                         }
                       />
                     </div>
@@ -278,9 +286,9 @@ export function StepJudgingConfig() {
             ))}
           </div>
 
-          <Button variant="outline" onClick={addCriterion} className="w-full">
+          <Button variant="outline" onClick={addCriterion} className="w-full" disabled={formData.judgingCriteria.length >= 5}>
             <Plus className="size-4" />
-            Add Criterion
+            {formData.judgingCriteria.length >= 5 ? "Maximum 5 criteria reached" : "Add Criterion"}
           </Button>
         </CardContent>
       </Card>

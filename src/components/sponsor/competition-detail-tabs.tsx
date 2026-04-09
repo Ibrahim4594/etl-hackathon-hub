@@ -26,8 +26,14 @@ import {
   ArrowUpRight,
   TrendingUp,
   Target,
+  Award,
+  Building2,
+  ListChecks,
+  SlidersHorizontal,
+  Info,
+  Pencil,
 } from "lucide-react";
-import { COMPETITION_STATUS_CONFIG } from "@/lib/constants/status-colors";
+import { COMPETITION_STATUS_CONFIG, getSubmissionStatusLabel } from "@/lib/constants/status-colors";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -57,6 +63,15 @@ interface CompetitionData {
   aiJudgingWeight: number | null;
   humanJudgingWeight: number | null;
   tags: string[];
+  prizes: { position: number; title: string; amount: number; currency: string; description?: string }[];
+  submissionRequirements: {
+    githubRequired: boolean;
+    videoRequired: boolean;
+    deployedUrlRequired: boolean;
+    pitchDeckRequired: boolean;
+    maxScreenshots: number;
+  } | null;
+  judgingCriteria: { name: string; description: string; weight: number; maxScore: number }[];
 }
 
 interface SubmissionRow {
@@ -92,10 +107,21 @@ interface StatusCounts {
   winner: number;
 }
 
+interface SponsorRow {
+  id: string;
+  companyName: string;
+  logoUrl: string | null;
+  sponsorTier: string;
+  contributionType: string;
+  contributionTitle: string;
+  isOrganizer: boolean | null;
+}
+
 interface Props {
   competition: CompetitionData;
   submissions: SubmissionRow[];
   judges: JudgeRow[];
+  sponsors: SponsorRow[];
   statusCounts: StatusCounts;
   totalTeams: number;
   totalParticipants: number;
@@ -116,6 +142,14 @@ const SUB_STATUS_CONFIG: Record<string, { color: string; icon: typeof CheckCircl
   winner: { color: "text-amber-400", icon: Trophy },
 };
 
+const SPONSOR_TIER_COLORS: Record<string, string> = {
+  title: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+  gold: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20",
+  silver: "bg-gray-500/10 text-gray-500 border-gray-500/20",
+  bronze: "bg-orange-500/10 text-orange-600 border-orange-500/20",
+  partner: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+};
+
 function fmtDate(d: string | null) {
   if (!d) return "Not set";
   return format(new Date(d), "MMM d, yyyy");
@@ -133,15 +167,17 @@ export function CompetitionDetailTabs({
   competition,
   submissions,
   judges,
+  sponsors,
   statusCounts,
   totalTeams,
   totalParticipants,
 }: Props) {
   const c = competition;
-  const cfg = COMPETITION_STATUS_CONFIG[c.status] ?? COMPETITION_STATUS_CONFIG.draft;
-  const isDraft = c.status === "draft";
+  const cfg = COMPETITION_STATUS_CONFIG[c.status] ?? COMPETITION_STATUS_CONFIG.pending_review;
+  const isEditable = c.status === "pending_review" || c.status === "draft";
   const isLive = c.status === "active";
   const totalSubs = submissions.length;
+
   const avgAi =
     submissions.filter((s) => s.aiScore !== null).reduce((a, s) => a + (s.aiScore ?? 0), 0) /
       (submissions.filter((s) => s.aiScore !== null).length || 1) || 0;
@@ -180,9 +216,9 @@ export function CompetitionDetailTabs({
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              {(isDraft || c.status === "pending_review") && (
+              {(isEditable || c.status === "pending_review") && (
                 <>
-                  {isDraft && (
+                  {isEditable && (
                     <Link href={`/sponsor/competitions/new?edit=${c.id}`}>
                       <Button variant="outline" size="sm">
                         <Edit className="mr-1.5 h-3.5 w-3.5" />
@@ -190,7 +226,7 @@ export function CompetitionDetailTabs({
                       </Button>
                     </Link>
                   )}
-                  {isDraft && <PublishButton competitionId={c.id} />}
+                  {isEditable && <PublishButton competitionId={c.id} />}
                 </>
               )}
               {c.status === "approved" && (
@@ -256,6 +292,19 @@ export function CompetitionDetailTabs({
 
         {/* ─── Overview Tab ──────────────────────────────────────── */}
         <TabsContent value="overview" className="space-y-6">
+          {/* Draft edit note */}
+          {isEditable && (
+            <div className="flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
+              <Info className="h-4 w-4 shrink-0 text-amber-500" />
+              <p className="text-xs text-amber-600">
+                Competition fields can only be edited while in review.{" "}
+                <Link href={`/sponsor/competitions/new?edit=${c.id}`} className="font-medium underline">
+                  Edit competition
+                </Link>
+              </p>
+            </div>
+          )}
+
           {/* Submission Pipeline */}
           <Card className="border-border/50 shadow-sm">
             <CardHeader className="pb-3">
@@ -374,6 +423,35 @@ export function CompetitionDetailTabs({
             </Card>
           </div>
 
+          {/* Timeline */}
+          <Card className={`border-border/50 shadow-sm${!isEditable ? " opacity-60 pointer-events-none" : ""}`}>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500/20 to-blue-500/5">
+                  <Clock className="h-4 w-4 text-blue-400" />
+                </div>
+                Competition Timeline
+                {isEditable && <Pencil className="h-3.5 w-3.5 text-muted-foreground" />}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {[
+                { phase: "Registration", start: c.registrationStart, end: c.registrationEnd },
+                { phase: "Submission", start: c.submissionStart, end: c.submissionEnd },
+                { phase: "Judging", start: c.judgingStart, end: c.judgingEnd },
+                { phase: "Results", start: c.resultsDate, end: null },
+              ].map(({ phase, start, end }) => (
+                <div key={phase} className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">{phase}</span>
+                  <span className="font-medium tabular-nums text-right">
+                    {start ? fmtDate(start) : "—"}
+                    {end ? ` → ${fmtDate(end)}` : ""}
+                  </span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
           {/* Description */}
           {c.description && (
             <Card className="border-border/50 shadow-sm">
@@ -387,6 +465,169 @@ export function CompetitionDetailTabs({
               </CardContent>
             </Card>
           )}
+
+          {/* Prizes */}
+          <Card className={`border-border/50 shadow-sm${!isEditable ? " opacity-60 pointer-events-none" : ""}`}>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500/20 to-amber-500/5">
+                  <Award className="h-4 w-4 text-amber-500" />
+                </div>
+                Prize Breakdown
+                {isEditable && <Pencil className="h-3.5 w-3.5 text-muted-foreground" />}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {c.prizes.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No prizes configured yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {c.prizes.map((prize) => (
+                    <div key={prize.position} className="flex items-start justify-between gap-4 rounded-lg border border-border/50 p-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-[11px] font-bold text-primary">
+                            {prize.position}
+                          </span>
+                          <span className="text-sm font-semibold">{prize.title}</span>
+                        </div>
+                        {prize.description && (
+                          <p className="mt-1 text-xs text-muted-foreground">{prize.description}</p>
+                        )}
+                      </div>
+                      <span className="shrink-0 text-sm font-bold text-primary">
+                        {prize.currency} {prize.amount.toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Sponsors */}
+          <Card className={`border-border/50 shadow-sm${!isEditable ? " opacity-60 pointer-events-none" : ""}`}>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500/20 to-blue-500/5">
+                  <Building2 className="h-4 w-4 text-blue-400" />
+                </div>
+                Sponsors
+                {isEditable && <Pencil className="h-3.5 w-3.5 text-muted-foreground" />}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {sponsors.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No sponsors added yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {sponsors.map((s) => (
+                    <div key={s.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/50 p-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">{s.companyName}</span>
+                          {s.isOrganizer && (
+                            <Badge variant="outline" className="shrink-0 text-[10px]">Organizer</Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">{s.contributionTitle}</p>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={`shrink-0 text-[10px] font-semibold capitalize ${SPONSOR_TIER_COLORS[s.sponsorTier] ?? ""}`}
+                      >
+                        {s.sponsorTier}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Submission Requirements */}
+          <Card className={`border-border/50 shadow-sm${!isEditable ? " opacity-60 pointer-events-none" : ""}`}>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500/20 to-emerald-500/5">
+                  <ListChecks className="h-4 w-4 text-emerald-500" />
+                </div>
+                Submission Requirements
+                {isEditable && <Pencil className="h-3.5 w-3.5 text-muted-foreground" />}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {!c.submissionRequirements ? (
+                <p className="text-sm text-muted-foreground">No submission requirements configured.</p>
+              ) : (
+                <div className="space-y-2">
+                  {(
+                    [
+                      { label: "GitHub repo required", value: c.submissionRequirements.githubRequired },
+                      { label: "Video demo required", value: c.submissionRequirements.videoRequired },
+                      { label: "Deployed URL required", value: c.submissionRequirements.deployedUrlRequired },
+                      { label: "Pitch deck required", value: c.submissionRequirements.pitchDeckRequired },
+                    ] as const
+                  ).map(({ label, value }) => (
+                    <div key={label} className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">{label}</span>
+                      <span className={value ? "font-medium text-emerald-500" : "text-muted-foreground"}>
+                        {value ? "Yes" : "No"}
+                      </span>
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Max screenshots</span>
+                    <span className="font-medium">{c.submissionRequirements.maxScreenshots}</span>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Judging Configuration */}
+          <Card className={`border-border/50 shadow-sm${!isEditable ? " opacity-60 pointer-events-none" : ""}`}>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500/20 to-purple-500/5">
+                  <SlidersHorizontal className="h-4 w-4 text-purple-400" />
+                </div>
+                Judging Configuration
+                {isEditable && <Pencil className="h-3.5 w-3.5 text-muted-foreground" />}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">AI judging weight</span>
+                <span className="font-semibold">{c.aiJudgingWeight}%</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Human judging weight</span>
+                <span className="font-semibold">{c.humanJudgingWeight}%</span>
+              </div>
+              {c.judgingCriteria.length > 0 && (
+                <div className="space-y-2 pt-1">
+                  <p className="text-xs font-medium text-muted-foreground">Criteria</p>
+                  {c.judgingCriteria.map((criterion) => (
+                    <div key={criterion.name} className="flex items-center justify-between rounded-lg border border-border/50 p-2.5 text-sm">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium">{criterion.name}</p>
+                        {criterion.description && (
+                          <p className="text-xs text-muted-foreground">{criterion.description}</p>
+                        )}
+                      </div>
+                      <span className="ml-4 shrink-0 text-xs text-muted-foreground">
+                        {criterion.weight}% · max {criterion.maxScore}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {c.judgingCriteria.length === 0 && (
+                <p className="text-sm text-muted-foreground">No custom judging criteria defined.</p>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* ─── Submissions Tab ───────────────────────────────────── */}
@@ -418,7 +659,12 @@ export function CompetitionDetailTabs({
 
                       {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <p className="truncate text-sm font-semibold">{sub.title}</p>
+                        <Link
+                          href={`/sponsor/competitions/${c.id}/submissions/${sub.id}`}
+                          className="truncate text-sm font-semibold hover:text-primary transition-colors"
+                        >
+                          {sub.title}
+                        </Link>
                         <p className="text-xs text-muted-foreground">
                           by {sub.teamName} · {formatDistanceToNow(new Date(sub.createdAt), { addSuffix: true })}
                         </p>
@@ -428,7 +674,7 @@ export function CompetitionDetailTabs({
                       <div className="flex items-center gap-1.5">
                         <StatusIcon className={`h-3.5 w-3.5 ${scfg.color}`} />
                         <span className={`text-xs font-medium ${scfg.color}`}>
-                          {sub.status.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+                          {getSubmissionStatusLabel(sub.status)}
                         </span>
                       </div>
 

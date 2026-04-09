@@ -29,7 +29,7 @@ export default async function CompetitionsMarketplace({
   const offset = (page - 1) * limit;
 
   // Build conditions — default to public-visible statuses
-  type HackathonStatus = "draft" | "pending_review" | "approved" | "active" | "judging" | "completed" | "cancelled";
+  type HackathonStatus = "pending_review" | "approved" | "active" | "judging" | "completed" | "cancelled";
   const validStatuses: HackathonStatus[] = ["active", "judging", "completed"];
   const statusFilter =
     params.status === "ended"
