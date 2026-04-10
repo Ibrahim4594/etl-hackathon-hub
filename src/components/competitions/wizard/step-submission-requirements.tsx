@@ -107,6 +107,7 @@ export function StepSubmissionRequirements() {
     deployedUrlRequired: false,
     pitchDeckRequired: false,
     maxScreenshots: 5,
+    screenshotsRequired: false,
   };
 
   // Track "none" state separately since DB only stores boolean
@@ -145,13 +146,7 @@ export function StepSubmissionRequirements() {
 
     const val = next === "required" ? true : false;
 
-    const updated = {
-      githubRequired: reqs.githubRequired,
-      videoRequired: reqs.videoRequired,
-      deployedUrlRequired: reqs.deployedUrlRequired,
-      pitchDeckRequired: reqs.pitchDeckRequired,
-      maxScreenshots: reqs.maxScreenshots,
-    };
+    const updated = { ...reqs };
 
     switch (key) {
       case "github":
@@ -222,7 +217,7 @@ export function StepSubmissionRequirements() {
             Screenshots
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
             <div className="flex-1">
               <Label htmlFor="maxScreenshots" className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -237,10 +232,7 @@ export function StepSubmissionRequirements() {
                 onChange={(e) =>
                   updateFormData({
                     submissionRequirements: {
-                      githubRequired: reqs.githubRequired,
-                      videoRequired: reqs.videoRequired,
-                      deployedUrlRequired: reqs.deployedUrlRequired,
-                      pitchDeckRequired: reqs.pitchDeckRequired,
+                      ...reqs,
                       maxScreenshots: Math.max(0, Math.min(20, Number(e.target.value) || 0)),
                     },
                   })
@@ -253,6 +245,37 @@ export function StepSubmissionRequirements() {
               many images of their project.
             </p>
           </div>
+
+          {reqs.maxScreenshots > 0 && (
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <Label className="text-xs cursor-pointer">Screenshots are required</Label>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={reqs.screenshotsRequired ?? false}
+                onClick={() =>
+                  updateFormData({
+                    submissionRequirements: {
+                      ...reqs,
+                      screenshotsRequired: !(reqs.screenshotsRequired ?? false),
+                    },
+                  })
+                }
+                className={`
+                  relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent
+                  transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
+                  ${reqs.screenshotsRequired ? "bg-primary" : "bg-muted-foreground/30"}
+                `}
+              >
+                <span
+                  className={`
+                    pointer-events-none inline-block size-4 rounded-full bg-background shadow-lg ring-0 transition-transform
+                    ${reqs.screenshotsRequired ? "translate-x-4" : "translate-x-0"}
+                  `}
+                />
+              </button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -460,7 +483,7 @@ export function StepSubmissionRequirements() {
             {reqs.maxScreenshots > 0 && (
               <PreviewField
                 label={`Screenshots (max ${reqs.maxScreenshots})`}
-                required={false}
+                required={reqs.screenshotsRequired ?? false}
               />
             )}
             {/* Custom fields preview */}

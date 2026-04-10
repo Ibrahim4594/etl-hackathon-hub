@@ -164,7 +164,7 @@ export function StepParticipationRules() {
 
         {/* Eligibility Criteria */}
         <div className="space-y-2">
-          <Label htmlFor="eligibilityCriteria">Eligibility Criteria</Label>
+          <Label htmlFor="eligibilityCriteria">Eligibility Criteria <span className="text-xs font-normal text-muted-foreground">(optional)</span></Label>
           <Textarea
             id="eligibilityCriteria"
             placeholder="e.g., Must be a university student in Pakistan, age 18-30, etc."

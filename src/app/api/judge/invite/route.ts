@@ -143,6 +143,7 @@ export async function POST(req: Request) {
     const safeExpertise = expertise ? escapeHtml(expertise.trim()) : null;
     const safeEmail = escapeHtml(email);
 
+    let emailSent = false;
     try {
       await sendEmail({
         to: email,
@@ -178,6 +179,7 @@ export async function POST(req: Request) {
           </div>
         `,
       });
+      emailSent = true;
     } catch (emailError) {
       console.error("Failed to send judge invitation email:", emailError);
     }
@@ -185,7 +187,10 @@ export async function POST(req: Request) {
     return NextResponse.json({
       message: existingUser
         ? "Judge assigned and notified"
-        : "Invitation sent — judge will be assigned when they sign up",
+        : emailSent
+          ? "Invitation sent — judge will be assigned when they sign up"
+          : "Invitation created but email delivery failed. Please verify your RESEND_API_KEY is configured correctly.",
+      emailSent,
     });
   } catch (error) {
     console.error("Judge invite error:", error);

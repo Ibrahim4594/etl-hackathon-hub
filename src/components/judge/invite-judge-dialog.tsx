@@ -36,7 +36,11 @@ export function InviteJudgeDialog({ competitionId }: { competitionId: string }) 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to invite judge");
 
-      toast.success(data.message || "Judge invited successfully!");
+      if (data.emailSent === false) {
+        toast.warning(data.message || "Invitation created but email could not be sent. Please share the link manually.");
+      } else {
+        toast.success(data.message || "Judge invited successfully!");
+      }
       setOpen(false);
       setName("");
       setEmail("");

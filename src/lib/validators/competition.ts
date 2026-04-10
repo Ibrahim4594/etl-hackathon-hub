@@ -39,7 +39,8 @@ export const submissionRequirementsSchema = z.object({
   videoRequired: z.boolean().default(true),
   deployedUrlRequired: z.boolean().default(false),
   pitchDeckRequired: z.boolean().default(false),
-  maxScreenshots: z.number().min(1).max(10).default(5),
+  maxScreenshots: z.number().min(0).max(20).default(5),
+  screenshotsRequired: z.boolean().default(false),
 });
 
 export const contributionTypes = [

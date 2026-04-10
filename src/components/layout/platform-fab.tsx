@@ -7,6 +7,9 @@ import { Trophy, FileText, Users, Plus } from "lucide-react";
 export function PlatformFab() {
   const pathname = usePathname();
 
+  // Hide FAB on wizard page to avoid overlapping with wizard navigation buttons
+  if (pathname.startsWith("/sponsor/competitions/new")) return null;
+
   // Determine options based on current route section
   const section = pathname.split("/")[1]; // student, sponsor, judge, admin
 

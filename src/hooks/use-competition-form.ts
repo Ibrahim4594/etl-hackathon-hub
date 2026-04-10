@@ -64,6 +64,7 @@ const initialFormData: CompetitionCreateInput = {
     deployedUrlRequired: false,
     pitchDeckRequired: false,
     maxScreenshots: 5,
+    screenshotsRequired: false,
   },
   customSubmissionFields: [],
   prizeConfirmed: false,

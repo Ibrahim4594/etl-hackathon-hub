@@ -1,15 +1,22 @@
 "use client";
 
+import { useCallback, useRef, useState } from "react";
 import { useCompetitionForm } from "@/hooks/use-competition-form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { FileText, Plus, Trash2, Link as LinkIcon } from "lucide-react";
+import { FileText, Plus, Trash2, Link as LinkIcon, Upload, Loader2, File } from "lucide-react";
+import { toast } from "sonner";
+
+const DOC_ACCEPT = ".pdf,.doc,.docx,.pptx,.xlsx,.zip";
 
 export function StepChallengeDetails() {
   const { formData, updateFormData } = useCompetitionForm();
+  const [uploading, setUploading] = useState<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadIndexRef = useRef<number>(0);
 
   const addResource = () => {
     updateFormData({
@@ -30,6 +37,47 @@ export function StepChallengeDetails() {
     updateFormData({ resources: updated });
   };
 
+  const handleFileUpload = useCallback(
+    async (file: File, index: number) => {
+      setUploading(index);
+      try {
+        const fd = new FormData();
+        fd.append("file", file);
+        const res = await fetch("/api/upload", { method: "POST", body: fd });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || "Upload failed");
+        }
+        const { url } = await res.json();
+        const updated = formData.resources.map((r, i) =>
+          i === index
+            ? { ...r, url, title: r.title || file.name.replace(/\.[^.]+$/, "") }
+            : r
+        );
+        updateFormData({ resources: updated });
+        toast.success("File uploaded");
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Upload failed");
+      } finally {
+        setUploading(null);
+      }
+    },
+    [formData.resources, updateFormData]
+  );
+
+  const triggerFileUpload = (index: number) => {
+    uploadIndexRef.current = index;
+    fileInputRef.current?.click();
+  };
+
+  const onFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleFileUpload(file, uploadIndexRef.current);
+    e.target.value = "";
+  };
+
+  const isUploadedFile = (url: string) => url.startsWith("/uploads/");
+
   return (
     <Card>
       <CardHeader>
@@ -43,9 +91,18 @@ export function StepChallengeDetails() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Hidden file input for document uploads */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={DOC_ACCEPT}
+          className="hidden"
+          onChange={onFileInputChange}
+        />
+
         {/* Challenge Statement */}
         <div className="space-y-2">
-          <Label htmlFor="challengeStatement">Challenge Statement</Label>
+          <Label htmlFor="challengeStatement">Challenge Statement <span className="text-xs font-normal text-muted-foreground">(optional)</span></Label>
           <Textarea
             id="challengeStatement"
             placeholder="Clearly describe the challenge or problem statement. What should participants build or solve?"
@@ -60,7 +117,7 @@ export function StepChallengeDetails() {
 
         {/* Requirements */}
         <div className="space-y-2">
-          <Label htmlFor="requirements">Requirements</Label>
+          <Label htmlFor="requirements">Requirements <span className="text-xs font-normal text-muted-foreground">(optional)</span></Label>
           <Textarea
             id="requirements"
             placeholder="List technical requirements, constraints, or guidelines. One per line recommended."
@@ -99,29 +156,55 @@ export function StepChallengeDetails() {
                 key={index}
                 className="flex items-start gap-3 rounded-lg border p-3"
               >
-                <div className="flex flex-1 flex-col gap-2 sm:flex-row">
-                  <div className="flex-1 space-y-1">
-                    <Label htmlFor={`resource-title-${index}`} className="text-xs text-muted-foreground">
-                      Title
-                    </Label>
-                    <Input
-                      id={`resource-title-${index}`}
-                      placeholder="Resource name"
-                      value={resource.title}
-                      onChange={(e) => updateResource(index, "title", e.target.value)}
-                    />
+                <div className="flex flex-1 flex-col gap-2">
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <div className="flex-1 space-y-1">
+                      <Label htmlFor={`resource-title-${index}`} className="text-xs text-muted-foreground">
+                        Title
+                      </Label>
+                      <Input
+                        id={`resource-title-${index}`}
+                        placeholder="Resource name"
+                        value={resource.title}
+                        onChange={(e) => updateResource(index, "title", e.target.value)}
+                      />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <Label htmlFor={`resource-url-${index}`} className="text-xs text-muted-foreground">
+                        {isUploadedFile(resource.url) ? "File" : "URL"}
+                      </Label>
+                      {isUploadedFile(resource.url) ? (
+                        <div className="flex items-center gap-2 h-10 rounded-xl bg-background/50 border border-input px-3">
+                          <File className="size-4 text-primary shrink-0" />
+                          <span className="text-sm truncate flex-1">{resource.title || "Uploaded file"}</span>
+                        </div>
+                      ) : (
+                        <Input
+                          id={`resource-url-${index}`}
+                          placeholder="https://..."
+                          type="url"
+                          value={resource.url}
+                          onChange={(e) => updateResource(index, "url", e.target.value)}
+                        />
+                      )}
+                    </div>
                   </div>
-                  <div className="flex-1 space-y-1">
-                    <Label htmlFor={`resource-url-${index}`} className="text-xs text-muted-foreground">
-                      URL
-                    </Label>
-                    <Input
-                      id={`resource-url-${index}`}
-                      placeholder="https://..."
-                      type="url"
-                      value={resource.url}
-                      onChange={(e) => updateResource(index, "url", e.target.value)}
-                    />
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 text-xs"
+                      onClick={() => triggerFileUpload(index)}
+                      disabled={uploading === index}
+                    >
+                      {uploading === index ? (
+                        <><Loader2 className="size-3.5 animate-spin" /> Uploading...</>
+                      ) : (
+                        <><Upload className="size-3.5" /> {isUploadedFile(resource.url) ? "Replace File" : "Upload File"}</>
+                      )}
+                    </Button>
+                    <span className="text-[11px] text-muted-foreground">PDF, DOCX, PPTX, XLSX, ZIP (max 10MB)</span>
                   </div>
                 </div>
                 <Button

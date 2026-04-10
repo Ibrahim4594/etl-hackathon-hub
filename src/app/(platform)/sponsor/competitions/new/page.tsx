@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { WizardShell } from "@/components/competitions/wizard/wizard-shell";
@@ -16,6 +16,9 @@ import { StepMedia } from "@/components/competitions/wizard/step-media";
 import { StepReview } from "@/components/competitions/wizard/step-review";
 import { useCompetitionForm, WIZARD_STEPS } from "@/hooks/use-competition-form";
 import type { CompetitionSponsorInput } from "@/lib/validators/competition";
+import { Card, CardContent } from "@/components/ui/card";
+import { Loader2, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const STEP_COMPONENTS: Record<(typeof WIZARD_STEPS)[number], React.ComponentType> = {
   "basic-info": StepBasicInfo,
@@ -43,16 +46,27 @@ export default function NewCompetitionPage() {
   const { currentStep, reset, updateFormData } = useCompetitionForm();
   const searchParams = useSearchParams();
   const editId = searchParams.get("edit");
+  const [isLoading, setIsLoading] = useState(!!editId);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     reset();
 
-    if (!editId) return;
+    if (!editId) {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setLoadError(null);
 
     fetch(`/api/competitions/${editId}`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load competition");
+        return res.json();
+      })
       .then(({ competition, sponsors: rawSponsors }) => {
-        if (!competition) return;
+        if (!competition) throw new Error("Competition not found");
 
         const sponsors: CompetitionSponsorInput[] = (rawSponsors ?? []).map(
           (s: Record<string, unknown>) => ({
@@ -120,14 +134,58 @@ export default function NewCompetitionPage() {
           sponsors,
         });
       })
-      .catch(() => {
-        /* keep reset state on error */
+      .catch((err) => {
+        setLoadError(err instanceof Error ? err.message : "Failed to load competition");
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editId]);
 
   const currentStepKey = WIZARD_STEPS[currentStep];
   const StepComponent = STEP_COMPONENTS[currentStepKey];
+
+  if (isLoading) {
+    return (
+      <div className="space-y-8">
+        <PageHeader
+          title="Edit Competition"
+          description="Loading competition data..."
+        />
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <Loader2 className="size-10 animate-spin text-primary" />
+            <p className="mt-4 text-sm text-muted-foreground">Loading competition...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="space-y-8">
+        <PageHeader
+          title="Edit Competition"
+          description="Something went wrong"
+        />
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <AlertCircle className="size-10 text-destructive" />
+            <p className="mt-4 text-sm text-destructive">{loadError}</p>
+            <Button
+              variant="outline"
+              className="mt-4"
+              onClick={() => window.location.reload()}
+            >
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
