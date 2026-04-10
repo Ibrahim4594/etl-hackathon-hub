@@ -48,6 +48,7 @@ export default function NewCompetitionPage() {
   const editId = searchParams.get("edit");
   const [isLoading, setIsLoading] = useState(!!editId);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     reset();
@@ -141,7 +142,7 @@ export default function NewCompetitionPage() {
         setIsLoading(false);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editId]);
+  }, [editId, retryKey]);
 
   const currentStepKey = WIZARD_STEPS[currentStep];
   const StepComponent = STEP_COMPONENTS[currentStepKey];
@@ -177,7 +178,7 @@ export default function NewCompetitionPage() {
             <Button
               variant="outline"
               className="mt-4"
-              onClick={() => window.location.reload()}
+              onClick={() => setRetryKey((k) => k + 1)}
             >
               Retry
             </Button>
