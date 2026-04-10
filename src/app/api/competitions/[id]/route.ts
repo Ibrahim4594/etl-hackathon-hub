@@ -180,9 +180,11 @@ export async function PATCH(
     return NextResponse.json({ error: "You do not own this competition" }, { status: 403 });
   }
 
-  if (competition.status !== "pending_review" && competition.status !== "draft") {
+  // Allow editing: draft, pending_review, approved, and active (limited fields for active)
+  const editableStatuses = ["draft", "pending_review", "approved", "active"];
+  if (!editableStatuses.includes(competition.status)) {
     return NextResponse.json(
-      { error: "Only pending review competitions can be edited" },
+      { error: "Competitions in judging or completed status cannot be edited" },
       { status: 400 }
     );
   }

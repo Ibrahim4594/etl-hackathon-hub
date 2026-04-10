@@ -34,9 +34,9 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "competitionId is required" }, { status: 400 });
     }
 
-    if (!action || !["approve", "reject"].includes(action)) {
+    if (!action || !["approve", "reject", "request_info"].includes(action)) {
       return NextResponse.json(
-        { error: "action must be 'approve' or 'reject'" },
+        { error: "action must be 'approve', 'reject', or 'request_info'" },
         { status: 400 }
       );
     }
@@ -56,6 +56,27 @@ export async function PATCH(req: Request) {
         { error: "Only pending_review competitions can be approved or rejected" },
         { status: 400 }
       );
+    }
+
+    // Handle "request_info" action — keep status as pending_review, just notify organizer
+    if (action === "request_info") {
+      if (!reason?.trim()) {
+        return NextResponse.json({ error: "Please specify what information is needed" }, { status: 400 });
+      }
+      try {
+        if (competition.createdBy) {
+          await createNotification({
+            userId: competition.createdBy,
+            type: "general",
+            title: "Additional Information Requested",
+            message: `An admin has requested more information for "${competition.title}": ${reason}`,
+            link: `/sponsor/competitions/new?edit=${competition.id}`,
+          });
+        }
+      } catch (notifErr) {
+        console.error("Admin request_info notification failed:", notifErr);
+      }
+      return NextResponse.json({ success: true, message: "Information request sent to organizer" });
     }
 
     const newStatus = action === "approve" ? "approved" : "cancelled"; // "cancelled" = rejected in UI

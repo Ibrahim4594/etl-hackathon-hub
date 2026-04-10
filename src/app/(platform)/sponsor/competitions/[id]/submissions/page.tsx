@@ -21,6 +21,7 @@ import {
   BarChart3,
   ArrowLeft,
   Trophy,
+  Download,
 } from "lucide-react";
 import Link from "next/link";
 import { SUBMISSION_STATUS_COLORS, getSubmissionStatusLabel } from "@/lib/constants/status-colors";
@@ -162,6 +163,20 @@ export default async function SponsorSubmissionsPage({
             <h1 className="text-2xl font-bold">Submissions</h1>
             <p className="text-sm text-muted-foreground">{competition.title}</p>
           </div>
+        </div>
+        <div className="flex gap-2">
+          <a href={`/api/competitions/${id}/export?type=submissions`} download>
+            <Button size="sm" variant="outline">
+              <Download className="mr-1.5 h-3.5 w-3.5" />
+              Export Submissions
+            </Button>
+          </a>
+          <a href={`/api/competitions/${id}/export?type=participants`} download>
+            <Button size="sm" variant="outline">
+              <Download className="mr-1.5 h-3.5 w-3.5" />
+              Export Participants
+            </Button>
+          </a>
         </div>
       </div>
 

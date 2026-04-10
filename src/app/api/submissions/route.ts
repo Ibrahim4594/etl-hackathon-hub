@@ -64,6 +64,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Competition is not active" }, { status: 400 });
     }
 
+    // Check submission window has opened
+    if (competition.submissionStart && new Date() < new Date(competition.submissionStart)) {
+      return NextResponse.json({ error: "Submission window has not opened yet" }, { status: 400 });
+    }
+
     // Check submission deadline hasn't passed
     if (competition.submissionEnd && new Date() > new Date(competition.submissionEnd)) {
       return NextResponse.json({ error: "Submission deadline has passed" }, { status: 400 });

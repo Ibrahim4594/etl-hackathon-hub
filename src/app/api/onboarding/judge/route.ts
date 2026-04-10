@@ -94,7 +94,12 @@ export async function POST(req: Request) {
           )
         );
 
+      const INVITE_EXPIRY_DAYS = 7;
       for (const invite of pendingInvitations) {
+        // Skip expired invitations (older than 7 days)
+        const ageMs = Date.now() - new Date(invite.createdAt).getTime();
+        if (ageMs > INVITE_EXPIRY_DAYS * 24 * 60 * 60 * 1000) continue;
+
         try {
           await db.insert(judgeAssignments).values({
             judgeId: dbUser.id,

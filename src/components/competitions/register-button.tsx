@@ -9,8 +9,13 @@ import { toast } from "sonner";
 export function RegisterButton({ competitionId }: { competitionId: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const handleRegister = async () => {
+    if (!termsAccepted) {
+      toast.error("Please accept the terms and conditions to register");
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch(`/api/competitions/${competitionId}/register`, {
@@ -28,9 +33,23 @@ export function RegisterButton({ competitionId }: { competitionId: string }) {
   };
 
   return (
-    <Button size="lg" onClick={handleRegister} disabled={loading}>
-      {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-      Register Now
-    </Button>
+    <div className="space-y-3">
+      <label className="flex items-start gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={termsAccepted}
+          onChange={(e) => setTermsAccepted(e.target.checked)}
+          className="mt-1 h-4 w-4 rounded border-border accent-primary"
+        />
+        <span className="text-xs text-muted-foreground leading-relaxed">
+          I accept the competition rules and agree to the terms of participation,
+          including submission guidelines and fair play policies.
+        </span>
+      </label>
+      <Button size="lg" onClick={handleRegister} disabled={loading || !termsAccepted} className="w-full">
+        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        Register Now
+      </Button>
+    </div>
   );
 }
