@@ -81,7 +81,7 @@ export async function POST(
     }
 
     // Fetch valid/AI-evaluated submissions eligible for judging
-    const eligibleStatuses = ["valid", "ai_evaluated"] as const;
+    const eligibleStatuses = ["submitted", "valid", "ai_evaluated"] as const;
     const eligibleSubmissions = await db
       .select({
         id: submissions.id,
@@ -99,7 +99,7 @@ export async function POST(
 
     if (eligibleSubmissions.length === 0) {
       return NextResponse.json(
-        { error: "No eligible submissions to assign (need status: valid or ai_evaluated)" },
+        { error: "No eligible submissions to assign (need status: submitted, valid, or ai_evaluated)" },
         { status: 400 },
       );
     }

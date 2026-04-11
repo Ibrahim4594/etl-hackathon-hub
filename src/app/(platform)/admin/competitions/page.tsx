@@ -6,7 +6,6 @@ import { competitions, organizations, competitionSponsors } from "@/lib/db/schem
 import { eq, desc, inArray, count } from "drizzle-orm";
 import { resolveOnboardingUser } from "@/lib/auth/resolve-onboarding-user";
 import { PageHeader } from "@/components/shared/page-header";
-import { InviteJudgeDialog } from "@/components/judge/invite-judge-dialog";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -17,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Trophy, ShieldCheck, ShieldX, Globe, Lock } from "lucide-react";
+import { Trophy, Globe, Lock } from "lucide-react";
 import { AdminCompetitionActions } from "./actions";
 import { GoLiveButton } from "@/components/competitions/go-live-button";
 import { HackathonManagementActions } from "@/components/competitions/hackathon-management-actions";
@@ -136,9 +135,6 @@ export default async function AdminCompetitionsPage({ searchParams }: PageProps)
           title="Hackathon Management"
           description="View and manage all hackathons across all statuses"
         />
-        {pageCompetitions.length > 0 && (
-          <InviteJudgeDialog competitionId={pageCompetitions[0].id} />
-        )}
       </div>
 
       <Suspense fallback={null}>
@@ -161,81 +157,63 @@ export default async function AdminCompetitionsPage({ searchParams }: PageProps)
             <TableHeader>
               <TableRow>
                 <TableHead>Hackathon</TableHead>
-                <TableHead>Organization</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Category</TableHead>
                 <TableHead>Prize Pool</TableHead>
-                <TableHead>Visibility</TableHead>
-                <TableHead>Prize Status</TableHead>
+                <TableHead>Details</TableHead>
                 <TableHead>Sponsors</TableHead>
                 <TableHead>Deadline</TableHead>
-                <TableHead>Created</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pageCompetitions.map((comp) => (
+              {pageCompetitions.map((comp) => {
+                const info = sponsorsByComp.get(comp.id);
+                return (
                 <TableRow key={comp.id}>
-                  <TableCell className="font-medium">{comp.title}</TableCell>
-                  <TableCell>{comp.organizationName}</TableCell>
+                  <TableCell>
+                    <div className="min-w-0">
+                      <p className="font-medium truncate max-w-[220px]">{comp.title}</p>
+                      <p className="text-xs text-muted-foreground truncate">{comp.organizationName}{comp.category ? ` · ${comp.category}` : ""}</p>
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <Badge variant={statusVariant[comp.status] ?? "outline"}>
                       {statusLabel[comp.status] ?? comp.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>{comp.category || "-"}</TableCell>
-                  <TableCell>
-                    PKR {(comp.totalPrizePool ?? 0).toLocaleString()}
+                  <TableCell className="whitespace-nowrap">
+                    <div>
+                      <p className="text-sm font-medium">PKR {(comp.totalPrizePool ?? 0).toLocaleString()}</p>
+                      {comp.prizeConfirmed ? (
+                        <span className="text-[10px] text-emerald-500">Confirmed</span>
+                      ) : (
+                        <span className="text-[10px] text-zinc-400">Unconfirmed</span>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
-                    {comp.visibility === "private" ? (
-                      <Badge className="bg-orange-500/10 text-orange-500 border-orange-500/20 hover:bg-orange-500/20">
-                        <Lock className="size-3 mr-1" />
-                        Private
-                      </Badge>
+                    <div className="flex gap-1.5">
+                      {comp.visibility === "private" ? (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                          <Lock className="size-2.5 mr-0.5" />
+                          Private
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                          <Globe className="size-2.5 mr-0.5" />
+                          Public
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {!info || info.count === 0 ? (
+                      <span className="text-muted-foreground text-xs">-</span>
                     ) : (
-                      <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 hover:bg-blue-500/20">
-                        <Globe className="size-3 mr-1" />
-                        Public
-                      </Badge>
+                      <span className="text-sm">{info.count} sponsor{info.count !== 1 ? "s" : ""}</span>
                     )}
                   </TableCell>
-                  <TableCell>
-                    {comp.prizeConfirmed ? (
-                      <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/20">
-                        <ShieldCheck className="size-3 mr-1" />
-                        Confirmed
-                      </Badge>
-                    ) : (
-                      <Badge className="bg-zinc-400/10 text-zinc-400 border-zinc-400/20 hover:bg-zinc-400/20">
-                        <ShieldX className="size-3 mr-1" />
-                        Unconfirmed
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {(() => {
-                      const info = sponsorsByComp.get(comp.id);
-                      if (!info || info.count === 0) return <span className="text-muted-foreground">-</span>;
-                      return (
-                        <div className="space-y-1">
-                          <div className="text-sm">{info.count} sponsor{info.count !== 1 ? "s" : ""}</div>
-                          {info.totalAmount > 0 && (
-                            <div className="text-xs text-muted-foreground">
-                              PKR {info.totalAmount.toLocaleString()}
-                            </div>
-                          )}
-                          {info.noContact > 0 && (
-                            <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-amber-500/20 text-xs">
-                              Missing contact
-                            </Badge>
-                          )}
-                        </div>
-                      );
-                    })()}
-                  </TableCell>
-                  <TableCell>{formatDate(comp.submissionEnd)}</TableCell>
-                  <TableCell>{formatDate(comp.createdAt)}</TableCell>
+                  <TableCell className="whitespace-nowrap text-sm">{formatDate(comp.submissionEnd)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex flex-col items-end gap-2">
                       {comp.status === "pending_review" && (
@@ -252,7 +230,8 @@ export default async function AdminCompetitionsPage({ searchParams }: PageProps)
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         </div>

@@ -81,7 +81,7 @@ export function CompetitionTimeline(props: CompetitionTimelineProps) {
     <div className="rounded-2xl border border-border/50 bg-card p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-3 py-1 text-xs font-semibold">
+        <span className="inline-flex items-center rounded-full bg-primary text-primary-foreground px-3 py-1 text-xs font-semibold">
           Progress Tracker
         </span>
         <span className="text-xs text-muted-foreground">
@@ -107,7 +107,7 @@ export function CompetitionTimeline(props: CompetitionTimelineProps) {
                     stage.status === "completed" &&
                       "border-emerald-500 bg-emerald-500 text-white",
                     stage.status === "current" &&
-                      "border-primary bg-primary/10 text-primary ring-4 ring-primary/20",
+                      "border-primary bg-primary text-primary-foreground ring-4 ring-primary/20",
                     stage.status === "upcoming" &&
                       "border-muted-foreground/30 bg-muted text-muted-foreground"
                   )}
@@ -122,8 +122,8 @@ export function CompetitionTimeline(props: CompetitionTimelineProps) {
                 <p
                   className={cn(
                     "mt-2 text-xs font-medium text-center whitespace-nowrap",
-                    stage.status === "completed" && "text-emerald-500",
-                    stage.status === "current" && "text-primary",
+                    stage.status === "completed" && "text-emerald-600 dark:text-emerald-400",
+                    stage.status === "current" && "text-foreground font-semibold",
                     stage.status === "upcoming" && "text-muted-foreground"
                   )}
                 >
@@ -161,7 +161,7 @@ export function CompetitionTimeline(props: CompetitionTimelineProps) {
                   stage.status === "completed" &&
                     "border-emerald-500 bg-emerald-500 text-white",
                   stage.status === "current" &&
-                    "border-primary bg-primary/10 text-primary",
+                    "border-primary bg-primary text-primary-foreground",
                   stage.status === "upcoming" &&
                     "border-muted-foreground/30 bg-muted text-muted-foreground"
                 )}
@@ -187,8 +187,8 @@ export function CompetitionTimeline(props: CompetitionTimelineProps) {
               <p
                 className={cn(
                   "text-sm font-medium",
-                  stage.status === "completed" && "text-emerald-500",
-                  stage.status === "current" && "text-primary",
+                  stage.status === "completed" && "text-emerald-600 dark:text-emerald-400",
+                  stage.status === "current" && "text-foreground font-semibold",
                   stage.status === "upcoming" && "text-muted-foreground"
                 )}
               >

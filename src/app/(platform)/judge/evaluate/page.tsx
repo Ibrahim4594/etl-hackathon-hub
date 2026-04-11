@@ -68,7 +68,7 @@ export default async function JudgeEvaluatePage() {
     );
   }
 
-  // Get all submissions for assigned competitions
+  // Get only submissions assigned to this judge (via judgeEvaluations rows)
   const allSubmissions = await db
     .select({
       submissionId: submissions.id,
@@ -78,20 +78,26 @@ export default async function JudgeEvaluatePage() {
       competitionId: competitions.id,
       competitionTitle: competitions.title,
       createdAt: submissions.createdAt,
+      evaluationScore: judgeEvaluations.compositeScore,
     })
     .from(submissions)
     .innerJoin(teams, eq(submissions.teamId, teams.id))
     .innerJoin(competitions, eq(submissions.competitionId, competitions.id))
+    .innerJoin(
+      judgeEvaluations,
+      and(
+        eq(judgeEvaluations.submissionId, submissions.id),
+        eq(judgeEvaluations.judgeId, dbUser.id)
+      )
+    )
     .where(inArray(submissions.competitionId, compIds))
     .orderBy(desc(submissions.createdAt));
 
-  // Check which ones this judge already evaluated
-  const myEvaluations = await db
-    .select({ submissionId: judgeEvaluations.submissionId })
-    .from(judgeEvaluations)
-    .where(eq(judgeEvaluations.judgeId, dbUser.id));
-
-  const evaluatedSet = new Set(myEvaluations.map((e) => e.submissionId));
+  const evaluatedSet = new Set(
+    allSubmissions
+      .filter((s) => s.evaluationScore !== null)
+      .map((s) => s.submissionId)
+  );
 
   const pending = allSubmissions.filter(
     (s) => !evaluatedSet.has(s.submissionId)

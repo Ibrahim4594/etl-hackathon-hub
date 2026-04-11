@@ -40,7 +40,7 @@ export function WizardShell({ children }: WizardShellProps) {
                     className={cn(
                       "flex size-8 items-center justify-center rounded-full border-2 text-xs font-semibold transition-colors",
                       isCompleted && "border-primary bg-primary text-primary-foreground",
-                      isCurrent && "border-primary bg-primary/10 text-primary",
+                      isCurrent && "border-primary bg-primary text-primary-foreground",
                       !isCompleted && !isCurrent && "border-muted-foreground/30 text-muted-foreground"
                     )}
                   >

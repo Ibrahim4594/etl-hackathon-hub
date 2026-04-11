@@ -6,9 +6,11 @@ import {
   competitions,
   judgeInvitations,
   judgeAssignments,
+  judgeEvaluations,
+  submissions,
   organizations,
 } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { sendEmail } from "@/lib/services/email";
 import { createNotification } from "@/lib/services/notification";
@@ -122,6 +124,34 @@ export async function POST(req: Request) {
         message: `You have been invited to judge "${competition.title}".`,
         link: `/judge/dashboard`,
       });
+
+      // Auto-distribute: assign eligible submissions to all judges (round-robin)
+      try {
+        const allJudges = await db
+          .select({ judgeId: judgeAssignments.judgeId })
+          .from(judgeAssignments)
+          .where(eq(judgeAssignments.competitionId, competitionId));
+
+        const eligibleSubs = await db
+          .select({ id: submissions.id })
+          .from(submissions)
+          .where(
+            and(
+              eq(submissions.competitionId, competitionId),
+              inArray(submissions.status, ["submitted", "valid", "ai_evaluated"])
+            )
+          );
+
+        if (allJudges.length > 0 && eligibleSubs.length > 0) {
+          const rows = eligibleSubs.map((sub, i) => ({
+            judgeId: allJudges[i % allJudges.length].judgeId,
+            submissionId: sub.id,
+          }));
+          await db.insert(judgeEvaluations).values(rows).onConflictDoNothing();
+        }
+      } catch (autoAssignErr) {
+        console.error("Auto-distribute after invite failed:", autoAssignErr);
+      }
     }
 
     // Create invitation record (for tracking + auto-assign on signup)

@@ -138,9 +138,10 @@ export function StepPrizes() {
                       min={0}
                       placeholder="0"
                       value={prize.amount || ""}
-                      onChange={(e) =>
-                        updatePrize(index, "amount", parseInt(e.target.value) || 0)
-                      }
+                      onChange={(e) => {
+                        const raw = parseInt(e.target.value);
+                        updatePrize(index, "amount", isNaN(raw) ? 0 : raw);
+                      }}
                     />
                   </div>
                 </div>

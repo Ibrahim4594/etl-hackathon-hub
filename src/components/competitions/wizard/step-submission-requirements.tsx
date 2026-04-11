@@ -229,12 +229,17 @@ export function StepSubmissionRequirements() {
                 min={0}
                 max={20}
                 value={reqs.maxScreenshots}
-                onChange={(e) =>
+                onChange={(e) => {
+                  const raw = parseInt(e.target.value);
+                  if (!isNaN(raw)) {
+                    updateFormData({
+                      submissionRequirements: { ...reqs, maxScreenshots: raw },
+                    });
+                  }
+                }}
+                onBlur={() =>
                   updateFormData({
-                    submissionRequirements: {
-                      ...reqs,
-                      maxScreenshots: Math.max(0, Math.min(20, Number(e.target.value) || 0)),
-                    },
+                    submissionRequirements: { ...reqs, maxScreenshots: Math.max(0, Math.min(20, reqs.maxScreenshots || 0)) },
                   })
                 }
                 className="mt-1 w-24 rounded-lg"

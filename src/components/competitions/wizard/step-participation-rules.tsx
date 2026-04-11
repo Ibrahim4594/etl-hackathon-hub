@@ -65,13 +65,15 @@ export function StepParticipationRules() {
               type="number"
               min={1}
               max={50}
-              value={formData.minTeamSize}
+              value={formData.minTeamSize || ""}
               onChange={(e) => {
-                const val = Math.max(1, Math.min(50, parseInt(e.target.value) || 1));
-                updateFormData({
-                  minTeamSize: val,
-                  ...(val > 1 ? { allowSoloParticipation: false } : {}),
-                });
+                if (e.target.value === "") { updateFormData({ minTeamSize: 0 }); return; }
+                const raw = parseInt(e.target.value);
+                if (!isNaN(raw)) updateFormData({ minTeamSize: raw, ...(raw > 1 ? { allowSoloParticipation: false } : {}) });
+              }}
+              onBlur={() => {
+                const val = Math.max(1, Math.min(50, formData.minTeamSize || 1));
+                updateFormData({ minTeamSize: val, ...(val > 1 ? { allowSoloParticipation: false } : {}) });
               }}
             />
             <p className="text-xs text-muted-foreground">
@@ -87,9 +89,14 @@ export function StepParticipationRules() {
               type="number"
               min={1}
               max={50}
-              value={formData.maxTeamSize}
+              value={formData.maxTeamSize || ""}
               onChange={(e) => {
-                const val = Math.max(1, Math.min(50, parseInt(e.target.value) || 4));
+                if (e.target.value === "") { updateFormData({ maxTeamSize: 0 }); return; }
+                const raw = parseInt(e.target.value);
+                if (!isNaN(raw)) updateFormData({ maxTeamSize: raw });
+              }}
+              onBlur={() => {
+                const val = Math.max(1, Math.min(50, formData.maxTeamSize || 4));
                 updateFormData({ maxTeamSize: val });
               }}
             />

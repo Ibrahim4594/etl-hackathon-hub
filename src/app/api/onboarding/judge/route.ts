@@ -1,8 +1,8 @@
 import { clerkClient } from "@clerk/nextjs/server";
 import { serverAuth } from "@/lib/auth/server-auth";
 import { db } from "@/lib/db";
-import { users, judgeInvitations, judgeAssignments } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { users, judgeInvitations, judgeAssignments, judgeEvaluations, submissions } from "@/lib/db/schema";
+import { eq, and, inArray } from "drizzle-orm";
 import { resolveOnboardingUser } from "@/lib/auth/resolve-onboarding-user";
 import { NextResponse } from "next/server";
 import { z } from "zod/v4";
@@ -83,6 +83,7 @@ export async function POST(req: Request) {
     }
 
     // AUTO-ASSIGN: Check for pending judge invitations for this email
+    const assignedCompetitionIds: string[] = [];
     try {
       const pendingInvitations = await db
         .select()
@@ -94,12 +95,7 @@ export async function POST(req: Request) {
           )
         );
 
-      const INVITE_EXPIRY_DAYS = 7;
       for (const invite of pendingInvitations) {
-        // Skip expired invitations (older than 7 days)
-        const ageMs = Date.now() - new Date(invite.createdAt).getTime();
-        if (ageMs > INVITE_EXPIRY_DAYS * 24 * 60 * 60 * 1000) continue;
-
         try {
           await db.insert(judgeAssignments).values({
             judgeId: dbUser.id,
@@ -110,12 +106,57 @@ export async function POST(req: Request) {
             .update(judgeInvitations)
             .set({ accepted: true, acceptedAt: new Date() })
             .where(eq(judgeInvitations.id, invite.id));
+          if (invite.competitionId) {
+            assignedCompetitionIds.push(invite.competitionId);
+          }
         } catch {
           // Skip if already assigned
         }
       }
     } catch (assignErr) {
       console.error("Judge auto-assign failed:", assignErr);
+      // Don't fail onboarding for this
+    }
+
+    // AUTO-DISTRIBUTE: Round-robin assign submissions to judges for each competition
+    try {
+      if (assignedCompetitionIds.length > 0) {
+        for (const competitionId of assignedCompetitionIds) {
+          // Fetch all judges assigned to this competition
+          const allJudges = await db
+            .select({ judgeId: judgeAssignments.judgeId })
+            .from(judgeAssignments)
+            .where(eq(judgeAssignments.competitionId, competitionId));
+
+          if (allJudges.length === 0) continue;
+
+          // Fetch eligible submissions for this competition
+          const eligibleSubmissions = await db
+            .select({ id: submissions.id })
+            .from(submissions)
+            .where(
+              and(
+                eq(submissions.competitionId, competitionId),
+                inArray(submissions.status, ["submitted", "valid", "ai_evaluated"])
+              )
+            );
+
+          if (eligibleSubmissions.length === 0) continue;
+
+          // Round-robin distribute submissions across all judges
+          const evaluationRows = eligibleSubmissions.map((sub, i) => ({
+            judgeId: allJudges[i % allJudges.length].judgeId,
+            submissionId: sub.id,
+          }));
+
+          await db
+            .insert(judgeEvaluations)
+            .values(evaluationRows)
+            .onConflictDoNothing();
+        }
+      }
+    } catch (distributeErr) {
+      console.error("Judge auto-distribute evaluations failed:", distributeErr);
       // Don't fail onboarding for this
     }
 

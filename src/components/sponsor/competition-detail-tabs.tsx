@@ -174,7 +174,7 @@ export function CompetitionDetailTabs({
 }: Props) {
   const c = competition;
   const cfg = COMPETITION_STATUS_CONFIG[c.status] ?? COMPETITION_STATUS_CONFIG.pending_review;
-  const isEditable = c.status === "pending_review" || c.status === "draft";
+  const isEditable = c.status === "pending_review" || c.status === "draft" || c.status === "cancelled";
   const isLive = c.status === "active";
   const totalSubs = submissions.length;
 
@@ -238,7 +238,9 @@ export function CompetitionDetailTabs({
                   submissions={submissions}
                 />
               )}
-              <InviteJudgeDialog competitionId={c.id} />
+              {(c.status === "approved" || c.status === "active" || c.status === "judging") && (
+                <InviteJudgeDialog competitionId={c.id} />
+              )}
               {c.slug && (
                 <Link href={`/competitions/${c.slug}`} target="_blank">
                   <Button variant="ghost" size="sm">

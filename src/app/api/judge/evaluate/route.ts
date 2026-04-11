@@ -17,10 +17,11 @@ import { apiError } from "@/lib/api-error";
 
 /**
  * POST /api/judge/evaluate
- * Submit or update a judge's evaluation for a submission (scores 1-10 per criterion).
+ * Submit or update a judge's evaluation for a submission.
+ * Supports custom criteria — scores is a generic Record<string, number> (1-100 per criterion).
  *
  * @auth Required (Clerk session, role: judge, must be assigned to competition)
- * @body { submissionId, scores: { innovation, technical, impact, design }, comments?, overrideAi? }
+ * @body { submissionId, scores: Record<string, number>, comments?, overrideAi? }
  * @returns { success: true, evaluation: {...} } or { error: string }
  */
 export async function POST(req: Request) {
@@ -52,28 +53,35 @@ export async function POST(req: Request) {
       );
     }
 
-    const { innovation, technical, impact, design } = scores;
-    if (
-      typeof innovation !== "number" ||
-      typeof technical !== "number" ||
-      typeof impact !== "number" ||
-      typeof design !== "number"
-    ) {
+    // Validate scores generically — competitions can have custom criteria
+    if (typeof scores !== "object" || scores === null || Array.isArray(scores)) {
       return NextResponse.json(
-        { error: "All scores must be numbers" },
+        { error: "scores must be an object" },
         { status: 400 }
       );
     }
 
-    if (
-      [innovation, technical, impact, design].some(
-        (s) => s < 1 || s > 10
-      )
-    ) {
+    const scoreEntries = Object.entries(scores) as [string, unknown][];
+    if (scoreEntries.length === 0) {
       return NextResponse.json(
-        { error: "All scores must be between 1 and 10" },
+        { error: "scores must contain at least one criterion" },
         { status: 400 }
       );
+    }
+
+    for (const [key, value] of scoreEntries) {
+      if (typeof value !== "number" || !Number.isFinite(value)) {
+        return NextResponse.json(
+          { error: `Score for "${key}" must be a number` },
+          { status: 400 }
+        );
+      }
+      if (value < 1 || value > 100) {
+        return NextResponse.json(
+          { error: `Score for "${key}" must be between 1 and 100` },
+          { status: 400 }
+        );
+      }
     }
 
     // Fetch submission to get competition ID
@@ -111,9 +119,28 @@ export async function POST(req: Request) {
       );
     }
 
-    // Compute composite score (average of 4 scores)
+    // Verify judge is assigned to this specific submission
+    const [submissionAssignment] = await db
+      .select({ id: judgeEvaluations.id })
+      .from(judgeEvaluations)
+      .where(
+        and(
+          eq(judgeEvaluations.judgeId, dbUser.id),
+          eq(judgeEvaluations.submissionId, submissionId)
+        )
+      );
+
+    if (!submissionAssignment) {
+      return NextResponse.json(
+        { error: "You are not assigned to evaluate this submission" },
+        { status: 403 }
+      );
+    }
+
+    // Compute composite score (average of all criteria scores)
+    const scoreValues = Object.values(scores) as number[];
     const compositeScore =
-      (innovation + technical + impact + design) / 4;
+      scoreValues.reduce((sum, v) => sum + v, 0) / scoreValues.length;
 
     // Upsert judge evaluation
     const [existingEvaluation] = await db
@@ -133,7 +160,7 @@ export async function POST(req: Request) {
       [evaluation] = await db
         .update(judgeEvaluations)
         .set({
-          scores: { innovation, technical, impact, design },
+          scores,
           compositeScore,
           comments: comments ?? null,
           overrideAi: overrideAi ?? false,
@@ -148,7 +175,7 @@ export async function POST(req: Request) {
         .values({
           judgeId: dbUser.id,
           submissionId,
-          scores: { innovation, technical, impact, design },
+          scores,
           compositeScore,
           comments: comments ?? null,
           overrideAi: overrideAi ?? false,

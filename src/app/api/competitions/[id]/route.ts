@@ -180,16 +180,27 @@ export async function PATCH(
     return NextResponse.json({ error: "You do not own this competition" }, { status: 403 });
   }
 
-  // Allow editing: draft, pending_review, approved, and active (limited fields for active)
-  const editableStatuses = ["draft", "pending_review", "approved", "active"];
-  if (!editableStatuses.includes(competition.status)) {
+  // Handle "unpublish" flow: allow setting status back to pending_review from active/approved
+  const rawBody = await req.json();
+  const isUnpublish =
+    rawBody.status === "pending_review" &&
+    (competition.status === "active" || competition.status === "approved");
+
+  if (isUnpublish) {
+    const [updated] = await db
+      .update(competitions)
+      .set({ status: "pending_review", publishedAt: null, updatedAt: new Date() })
+      .where(eq(competitions.id, id))
+      .returning();
+    return NextResponse.json({ competition: updated });
+  }
+
+  if (competition.status !== "pending_review" && competition.status !== "draft" && competition.status !== "cancelled") {
     return NextResponse.json(
-      { error: "Competitions in judging or completed status cannot be edited" },
+      { error: "Only pending review or rejected competitions can be edited" },
       { status: 400 }
     );
   }
-
-  const rawBody = await req.json();
   const parsed = competitionUpdateSchema.safeParse(rawBody);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid request body", issues: parsed.error.issues }, { status: 400 });

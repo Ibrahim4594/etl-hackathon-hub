@@ -8,7 +8,7 @@ import {
   teams,
   judgeEvaluations,
 } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNotNull } from "drizzle-orm";
 import { redirect, notFound } from "next/navigation";
 import { resolveOnboardingUser } from "@/lib/auth/resolve-onboarding-user";
 import Link from "next/link";
@@ -76,6 +76,19 @@ export default async function AssignmentSubmissionsPage({
 
   const evaluatedIds = new Set(myEvaluations.map((e) => e.submissionId));
 
+  // Fetch only scored evaluations (compositeScore IS NOT NULL) for badge display
+  const scoredEvaluations = await db
+    .select({ submissionId: judgeEvaluations.submissionId })
+    .from(judgeEvaluations)
+    .where(
+      and(
+        eq(judgeEvaluations.judgeId, dbUser.id),
+        isNotNull(judgeEvaluations.compositeScore)
+      )
+    );
+
+  const scoredIds = new Set(scoredEvaluations.map((e) => e.submissionId));
+
   // Only show submissions specifically assigned to this judge
   const assignedSubmissions = allSubmissions.filter((sub) => evaluatedIds.has(sub.id));
 
@@ -102,7 +115,7 @@ export default async function AssignmentSubmissionsPage({
       ) : (
         <div className="space-y-3">
           {assignedSubmissions.map((sub) => {
-            const evaluated = evaluatedIds.has(sub.id);
+            const evaluated = scoredIds.has(sub.id);
             return (
               <Card key={sub.id} className="border-border/50">
                 <CardContent className="flex flex-wrap items-center justify-between gap-4 p-4">

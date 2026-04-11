@@ -7,7 +7,7 @@ import {
   submissions,
   judgeEvaluations,
 } from "@/lib/db/schema";
-import { eq, and, count, sql, inArray } from "drizzle-orm";
+import { eq, and, count, sql, inArray, isNotNull } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { resolveOnboardingUser } from "@/lib/auth/resolve-onboarding-user";
 import Link from "next/link";
@@ -71,7 +71,8 @@ export default async function JudgeAssignmentsPage() {
         .where(
           and(
             eq(judgeEvaluations.judgeId, dbUser.id),
-            inArray(submissions.competitionId, competitionIds)
+            inArray(submissions.competitionId, competitionIds),
+            isNotNull(judgeEvaluations.compositeScore)
           )
         )
         .groupBy(submissions.competitionId),

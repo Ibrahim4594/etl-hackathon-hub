@@ -161,10 +161,13 @@ export function StepJudgingConfig() {
               id="finalistCount"
               type="number"
               min={1}
-              value={formData.finalistCount}
-              onChange={(e) =>
-                updateFormData({ finalistCount: parseInt(e.target.value) || 10 })
-              }
+              value={formData.finalistCount || ""}
+              onChange={(e) => {
+                if (e.target.value === "") { updateFormData({ finalistCount: 0 }); return; }
+                const raw = parseInt(e.target.value);
+                if (!isNaN(raw)) updateFormData({ finalistCount: raw });
+              }}
+              onBlur={() => updateFormData({ finalistCount: Math.max(1, formData.finalistCount || 10) })}
             />
             <p className="text-xs text-muted-foreground">
               How many top submissions advance to the finalist round for human judging.
@@ -247,9 +250,12 @@ export function StepJudgingConfig() {
                         min={0}
                         max={100}
                         value={criterion.weight || ""}
-                        onChange={(e) =>
-                          updateCriterion(index, "weight", parseInt(e.target.value) || 0)
-                        }
+                        onChange={(e) => {
+                          if (e.target.value === "") { updateCriterion(index, "weight", 0); return; }
+                          const raw = parseInt(e.target.value);
+                          if (!isNaN(raw)) updateCriterion(index, "weight", raw);
+                        }}
+                        onBlur={() => updateCriterion(index, "weight", Math.max(0, Math.min(100, criterion.weight || 0)))}
                       />
                     </div>
                     <div className="space-y-1">
@@ -261,10 +267,13 @@ export function StepJudgingConfig() {
                         type="number"
                         min={1}
                         max={100}
-                        value={criterion.maxScore}
-                        onChange={(e) =>
-                          updateCriterion(index, "maxScore", parseInt(e.target.value) || 100)
-                        }
+                        value={criterion.maxScore || ""}
+                        onChange={(e) => {
+                          if (e.target.value === "") { updateCriterion(index, "maxScore", 0); return; }
+                          const raw = parseInt(e.target.value);
+                          if (!isNaN(raw)) updateCriterion(index, "maxScore", raw);
+                        }}
+                        onBlur={() => updateCriterion(index, "maxScore", Math.max(1, Math.min(100, criterion.maxScore || 100)))}
                       />
                     </div>
                   </div>

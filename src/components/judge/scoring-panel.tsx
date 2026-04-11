@@ -151,10 +151,10 @@ export function ScoringPanel({
                   </p>
                 )}
                 <div className="flex items-center gap-3">
-                  <span className="text-xs text-muted-foreground w-3">0</span>
+                  <span className="text-xs text-muted-foreground w-3">1</span>
                   <input
                     type="range"
-                    min={0}
+                    min={1}
                     max={criterion.maxScore}
                     step={1}
                     value={value}

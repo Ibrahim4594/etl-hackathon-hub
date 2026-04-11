@@ -17,6 +17,7 @@ export const COMPETITION_STATUS_CONFIG: Record<string, {
   judging: { color: "text-purple-400", bg: "bg-purple-500/10", border: "border-purple-500/20", label: "Judging", dot: true },
   completed: { color: "text-zinc-400", bg: "bg-zinc-500/10", border: "border-zinc-500/20", label: "Completed" },
   cancelled: { color: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/20", label: "Rejected" },
+  rejected: { color: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/20", label: "Rejected" },
 };
 
 export const COMPETITION_STATUS_COLORS: Record<string, string> = {
@@ -26,6 +27,7 @@ export const COMPETITION_STATUS_COLORS: Record<string, string> = {
   judging: "bg-purple-500/10 text-purple-400 border-purple-500/20",
   completed: "bg-zinc-500/10 text-zinc-400 border-zinc-400/20",
   cancelled: "bg-red-500/10 text-red-400 border-red-500/20",
+  rejected: "bg-red-500/10 text-red-400 border-red-500/20",
 };
 
 export const SUBMISSION_STATUS_COLORS: Record<string, string> = {

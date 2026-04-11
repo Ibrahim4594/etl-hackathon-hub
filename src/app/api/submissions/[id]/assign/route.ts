@@ -7,6 +7,7 @@ import {
   competitions,
   organizations,
   judgeAssignments,
+  judgeEvaluations,
   teams,
 } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -86,6 +87,11 @@ export async function POST(
         { status: 400 },
       );
     }
+
+    // Create evaluation record so the judge can see this submission
+    await db.insert(judgeEvaluations)
+      .values({ judgeId, submissionId })
+      .onConflictDoNothing();
 
     // Notify the judge
     await createNotification({

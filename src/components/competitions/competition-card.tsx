@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Trophy, Users, Clock, ArrowRight, Star } from "lucide-react";
+import { Trophy, Users, Clock, ArrowRight } from "lucide-react";
 import { formatDistanceToNow, isPast } from "date-fns";
 import { MagicCard } from "@/components/ui/magic-card";
 
@@ -23,7 +23,6 @@ interface CompetitionCardProps {
   status: string;
   targetParticipants?: string[];
   sponsors?: { companyName: string; logoUrl: string | null; sponsorTier: string }[];
-  sponsorLogos?: string[];
 }
 
 const STATUS_CONFIG: Record<string, { label: string; dot: string; text: string }> = {
@@ -94,7 +93,7 @@ export function CompetitionCard({
 
         {/* ── Content ── */}
         <div className="flex flex-1 flex-col p-5">
-          {/* Status + Category + Featured */}
+          {/* Status + Category */}
           <div className="flex items-center gap-2">
             <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold ${statusCfg.text}`}>
               <span className={`h-1.5 w-1.5 rounded-full ${statusCfg.dot} ${status === "active" ? "animate-pulse" : ""}`} />
@@ -105,12 +104,6 @@ export function CompetitionCard({
                 <span className="text-border">·</span>
                 <span className="text-[11px] text-muted-foreground">{category}</span>
               </>
-            )}
-            {totalPrizePool && totalPrizePool >= 50000 && (
-              <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
-                <Star className="h-2.5 w-2.5 fill-current" />
-                Featured
-              </span>
             )}
           </div>
 

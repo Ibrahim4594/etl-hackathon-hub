@@ -79,6 +79,19 @@ export default async function EvaluateSubmissionPage({
 
   if (!assignment) notFound();
 
+  // Verify judge is assigned to this specific submission
+  const [submissionAssignment] = await db
+    .select({ id: judgeEvaluations.id })
+    .from(judgeEvaluations)
+    .where(
+      and(
+        eq(judgeEvaluations.judgeId, dbUser.id),
+        eq(judgeEvaluations.submissionId, submission.id)
+      )
+    );
+
+  if (!submissionAssignment) notFound();
+
   // Fetch competition judging criteria
   const [compData] = await db
     .select({ judgingCriteria: competitions.judgingCriteria })

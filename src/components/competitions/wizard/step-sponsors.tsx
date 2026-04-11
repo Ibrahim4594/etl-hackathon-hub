@@ -418,13 +418,10 @@ export function StepSponsors() {
                               min={0}
                               placeholder="0"
                               value={sponsor.contributionAmount ?? ""}
-                              onChange={(e) =>
-                                updateSponsor(
-                                  index,
-                                  "contributionAmount",
-                                  parseInt(e.target.value) || 0
-                                )
-                              }
+                              onChange={(e) => {
+                                const raw = parseInt(e.target.value);
+                                updateSponsor(index, "contributionAmount", isNaN(raw) ? 0 : raw);
+                              }}
                               className="flex-1"
                             />
                           </div>
