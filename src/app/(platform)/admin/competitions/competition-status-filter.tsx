@@ -8,7 +8,7 @@ const STATUSES = [
   { value: "all", label: "All" },
   { value: "pending_review", label: "Pending Review" },
   { value: "approved", label: "Approved" },
-  { value: "active", label: "Active" },
+  { value: "active", label: "Live" },
   { value: "judging", label: "Judging" },
   { value: "completed", label: "Completed" },
   { value: "cancelled", label: "Rejected" },

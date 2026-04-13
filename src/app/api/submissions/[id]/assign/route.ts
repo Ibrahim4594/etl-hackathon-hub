@@ -111,3 +111,64 @@ export async function POST(
     );
   }
 }
+
+/**
+ * DELETE /api/submissions/[id]/assign
+ * Unassign a judge from a submission (only if not yet scored).
+ */
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { userId: clerkId } = await serverAuth();
+    if (!clerkId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id: submissionId } = await params;
+    const url = new URL(req.url);
+    const judgeId = url.searchParams.get("judgeId");
+
+    if (!judgeId) {
+      return NextResponse.json({ error: "judgeId query param is required" }, { status: 400 });
+    }
+
+    const [dbUser] = await db.select().from(users).where(eq(users.clerkId, clerkId));
+    if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+    // Fetch submission to verify ownership
+    const [submission] = await db
+      .select({ competitionId: submissions.competitionId, createdBy: competitions.createdBy })
+      .from(submissions)
+      .innerJoin(competitions, eq(submissions.competitionId, competitions.id))
+      .where(eq(submissions.id, submissionId));
+
+    if (!submission) return NextResponse.json({ error: "Submission not found" }, { status: 404 });
+    if (submission.createdBy !== dbUser.id && dbUser.role !== "admin") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // Only unassign if not yet scored
+    const [evaluation] = await db
+      .select({ id: judgeEvaluations.id, compositeScore: judgeEvaluations.compositeScore })
+      .from(judgeEvaluations)
+      .where(and(eq(judgeEvaluations.judgeId, judgeId), eq(judgeEvaluations.submissionId, submissionId)));
+
+    if (!evaluation) {
+      return NextResponse.json({ error: "Judge is not assigned to this submission" }, { status: 404 });
+    }
+    if (evaluation.compositeScore !== null) {
+      return NextResponse.json({ error: "Cannot unassign — judge has already scored this submission" }, { status: 400 });
+    }
+
+    await db.delete(judgeEvaluations).where(
+      and(eq(judgeEvaluations.judgeId, judgeId), eq(judgeEvaluations.submissionId, submissionId))
+    );
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Unassign submission error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}

@@ -146,6 +146,7 @@ export const stepSchemas: Partial<Record<string, z.ZodTypeAny>> = {
       submissionEnd: z.string().min(1, "Submission end is required"),
       judgingStart: z.string().min(1, "Judging start is required"),
       judgingEnd: z.string().min(1, "Judging end is required"),
+      resultsDate: z.string().optional(),
     })
     .refine(
       (d) => !d.registrationEnd || !d.registrationStart || d.registrationEnd > d.registrationStart,
@@ -166,6 +167,10 @@ export const stepSchemas: Partial<Record<string, z.ZodTypeAny>> = {
     .refine(
       (d) => !d.judgingEnd || !d.judgingStart || d.judgingEnd > d.judgingStart,
       { message: "Judging end must be after judging start", path: ["judgingEnd"] }
+    )
+    .refine(
+      (d) => !d.resultsDate || !d.judgingEnd || d.resultsDate > d.judgingEnd,
+      { message: "Results date must be after judging ends", path: ["resultsDate"] }
     ),
 
   "judging-config": z

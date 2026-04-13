@@ -106,52 +106,63 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "This judge is already assigned to this competition" }, { status: 409 });
       }
 
-      // User exists — assign directly
-      await db.insert(judgeAssignments).values({
-        judgeId: existingUser.id,
-        competitionId,
-        expertise: expertise?.trim() || null,
-      });
+      // Only auto-assign if user already has judge role — don't forcibly change other roles
+      if (existingUser.role === "judge") {
+        await db.insert(judgeAssignments).values({
+          judgeId: existingUser.id,
+          competitionId,
+          expertise: expertise?.trim() || null,
+        });
 
-      if (!existingUser.role || existingUser.role !== "judge") {
-        await db.update(users).set({ role: "judge", updatedAt: new Date() }).where(eq(users.id, existingUser.id));
-      }
+        await createNotification({
+          userId: existingUser.id,
+          type: "judge_assigned",
+          title: "Judge Invitation",
+          message: `You have been invited to judge "${competition.title}".`,
+          link: `/judge/dashboard`,
+        });
 
-      await createNotification({
-        userId: existingUser.id,
-        type: "judge_assigned",
-        title: "Judge Invitation",
-        message: `You have been invited to judge "${competition.title}".`,
-        link: `/judge/dashboard`,
-      });
-
-      // Auto-distribute: assign eligible submissions to all judges (round-robin)
-      try {
-        const allJudges = await db
-          .select({ judgeId: judgeAssignments.judgeId })
-          .from(judgeAssignments)
-          .where(eq(judgeAssignments.competitionId, competitionId));
-
-        const eligibleSubs = await db
-          .select({ id: submissions.id })
-          .from(submissions)
-          .where(
-            and(
-              eq(submissions.competitionId, competitionId),
-              inArray(submissions.status, ["submitted", "valid", "ai_evaluated"])
-            )
-          );
-
-        if (allJudges.length > 0 && eligibleSubs.length > 0) {
-          const rows = eligibleSubs.map((sub, i) => ({
-            judgeId: allJudges[i % allJudges.length].judgeId,
-            submissionId: sub.id,
-          }));
-          await db.insert(judgeEvaluations).values(rows).onConflictDoNothing();
+        // Notify organizer that judge was assigned
+        if (competition.createdBy) {
+          await createNotification({
+            userId: competition.createdBy,
+            type: "general",
+            title: "Judge Accepted",
+            message: `${name.trim()} has been assigned to judge "${competition.title}".`,
+            link: `/sponsor/competitions/${competitionId}`,
+          });
         }
-      } catch (autoAssignErr) {
-        console.error("Auto-distribute after invite failed:", autoAssignErr);
+
+        // Auto-distribute: assign eligible submissions to all judges (round-robin)
+        try {
+          const allJudges = await db
+            .select({ judgeId: judgeAssignments.judgeId })
+            .from(judgeAssignments)
+            .where(eq(judgeAssignments.competitionId, competitionId));
+
+          const eligibleSubs = await db
+            .select({ id: submissions.id })
+            .from(submissions)
+            .where(
+              and(
+                eq(submissions.competitionId, competitionId),
+                inArray(submissions.status, ["submitted", "valid", "ai_evaluated"])
+              )
+            );
+
+          if (allJudges.length > 0 && eligibleSubs.length > 0) {
+            const rows = eligibleSubs.map((sub, i) => ({
+              judgeId: allJudges[i % allJudges.length].judgeId,
+              submissionId: sub.id,
+            }));
+            await db.insert(judgeEvaluations).values(rows).onConflictDoNothing();
+          }
+        } catch (autoAssignErr) {
+          console.error("Auto-distribute after invite failed:", autoAssignErr);
+        }
       }
+      // If user is NOT a judge, just create the invitation record below and send email
+      // They'll be assigned when they accept and complete judge onboarding
     }
 
     // Create invitation record (for tracking + auto-assign on signup)

@@ -101,6 +101,20 @@ export async function POST(req: Request) {
       );
     }
 
+    // Check judging window
+    const [comp] = await db
+      .select({ judgingStart: competitions.judgingStart, judgingEnd: competitions.judgingEnd })
+      .from(competitions)
+      .where(eq(competitions.id, submission.competitionId));
+
+    const now = new Date();
+    if (comp?.judgingStart && now < new Date(comp.judgingStart)) {
+      return NextResponse.json({ error: "Judging window has not opened yet" }, { status: 400 });
+    }
+    if (comp?.judgingEnd && now > new Date(comp.judgingEnd)) {
+      return NextResponse.json({ error: "Judging window has closed" }, { status: 400 });
+    }
+
     // Verify judge is assigned to this competition
     const [assignment] = await db
       .select({ id: judgeAssignments.id })

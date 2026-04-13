@@ -6,6 +6,7 @@ import {
   submissions,
   teams,
   judgeAssignments,
+  judgeEvaluations,
   users,
 } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -118,6 +119,20 @@ export default async function SponsorSubmissionsPage({
     name: [j.firstName, j.lastName].filter(Boolean).join(" ") || "Unnamed Judge",
     email: j.email,
   }));
+
+  // Fetch existing judge-submission assignments
+  const existingEvaluations = await db
+    .select({ submissionId: judgeEvaluations.submissionId, judgeId: judgeEvaluations.judgeId })
+    .from(judgeEvaluations)
+    .innerJoin(submissions, eq(judgeEvaluations.submissionId, submissions.id))
+    .where(eq(submissions.competitionId, id));
+
+  const assignmentsBySubmission = new Map<string, string[]>();
+  for (const ev of existingEvaluations) {
+    const list = assignmentsBySubmission.get(ev.submissionId) ?? [];
+    list.push(ev.judgeId);
+    assignmentsBySubmission.set(ev.submissionId, list);
+  }
 
   // Compute stats
   const totalCount = allSubmissions.length;
@@ -355,6 +370,7 @@ export default async function SponsorSubmissionsPage({
                             submissionId={sub.id}
                             submissionTitle={sub.title}
                             judges={judges}
+                            assignedJudgeIds={assignmentsBySubmission.get(sub.id) ?? []}
                           />
                         </div>
                       </td>

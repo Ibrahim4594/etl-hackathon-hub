@@ -7,6 +7,7 @@ import { resolveOnboardingUser } from "@/lib/auth/resolve-onboarding-user";
 import { NextResponse } from "next/server";
 import { z } from "zod/v4";
 import { apiError } from "@/lib/api-error";
+import { createNotification } from "@/lib/services/notification";
 
 const judgeOnboardingSchema = z.object({
   expertise: z.string().min(2),
@@ -108,6 +109,16 @@ export async function POST(req: Request) {
             .where(eq(judgeInvitations.id, invite.id));
           if (invite.competitionId) {
             assignedCompetitionIds.push(invite.competitionId);
+          }
+          // Notify the organizer who invited this judge
+          if (invite.invitedBy) {
+            await createNotification({
+              userId: invite.invitedBy,
+              type: "general",
+              title: "Judge Accepted Invitation",
+              message: `${dbUser.firstName || "A judge"} has accepted your invitation and joined as a judge.`,
+              link: `/sponsor/competitions/${invite.competitionId}`,
+            });
           }
         } catch {
           // Skip if already assigned

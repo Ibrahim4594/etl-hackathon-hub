@@ -10,7 +10,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Loader2, UserPlus, CheckCircle2 } from "lucide-react";
+import { Loader2, UserPlus, CheckCircle2, X } from "lucide-react";
 
 interface Judge {
   id: string;
@@ -22,16 +22,18 @@ interface AssignSubmissionDialogProps {
   submissionId: string;
   submissionTitle: string;
   judges: Judge[];
+  assignedJudgeIds?: string[];
 }
 
 export function AssignSubmissionDialog({
   submissionId,
   submissionTitle,
   judges,
+  assignedJudgeIds = [],
 }: AssignSubmissionDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState<string | null>(null);
-  const [assigned, setAssigned] = useState<Set<string>>(new Set());
+  const [assigned, setAssigned] = useState<Set<string>>(new Set(assignedJudgeIds));
 
   async function handleAssign(judgeId: string) {
     setLoading(judgeId);
@@ -50,6 +52,30 @@ export function AssignSubmissionDialog({
 
       toast.success("Submission assigned — judge has been notified");
       setAssigned((prev) => new Set(prev).add(judgeId));
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function handleUnassign(judgeId: string) {
+    setLoading(judgeId);
+    try {
+      const res = await fetch(`/api/submissions/${submissionId}/assign?judgeId=${judgeId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.error || "Failed to unassign");
+        return;
+      }
+
+      toast.success("Judge unassigned from this submission");
+      setAssigned((prev) => {
+        const next = new Set(prev);
+        next.delete(judgeId);
+        return next;
+      });
     } finally {
       setLoading(null);
     }
@@ -101,10 +127,25 @@ export function AssignSubmissionDialog({
                       </p>
                     </div>
                     {isAssigned ? (
-                      <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        Assigned
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          Assigned
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                          onClick={() => handleUnassign(judge.id)}
+                          disabled={isLoading}
+                        >
+                          {isLoading ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <X className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                      </div>
                     ) : (
                       <Button
                         size="sm"

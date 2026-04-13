@@ -44,7 +44,7 @@ const statusVariant: Record<string, "default" | "secondary" | "outline" | "destr
 const statusLabel: Record<string, string> = {
   pending_review: "Pending Review",
   approved: "Approved",
-  active: "Active",
+  active: "Live",
   judging: "Judging",
   completed: "Completed",
   cancelled: "Rejected",

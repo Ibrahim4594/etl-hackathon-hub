@@ -53,7 +53,10 @@ export async function POST(
       }
     }
 
-    // Check registration deadline
+    // Check registration window
+    if (competition.registrationStart && new Date() < new Date(competition.registrationStart)) {
+      return NextResponse.json({ error: "Registration has not opened yet" }, { status: 400 });
+    }
     if (competition.registrationEnd && new Date(competition.registrationEnd) < new Date()) {
       return NextResponse.json({ error: "Registration deadline has passed" }, { status: 400 });
     }
