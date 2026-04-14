@@ -1,12 +1,13 @@
 import { serverAuth } from "@/lib/auth/server-auth";
 import { db } from "@/lib/db";
 import { competitions, users, organizations } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { triggerEvent } from "@/lib/services/pusher";
 import { channels, EVENTS } from "@/lib/services/pusher-channels";
 import { createNotification } from "@/lib/services/notification";
 import { sendEmail } from "@/lib/services/email";
+import { apiError } from "@/lib/api-error";
 
 /**
  * POST /api/competitions/[id]/go-live
@@ -55,12 +56,29 @@ export async function POST(
       return NextResponse.json({ error: "Competition not found" }, { status: 404 });
     }
 
-    // Sponsor must own the competition
-    if (dbUser.role === "sponsor" && competition.createdBy !== dbUser.id) {
-      return NextResponse.json(
-        { error: "You do not own this competition" },
-        { status: 403 }
-      );
+    // Sponsor must own the competition and its organization
+    if (dbUser.role === "sponsor") {
+      if (competition.createdBy !== dbUser.id) {
+        return NextResponse.json(
+          { error: "You do not own this competition" },
+          { status: 403 }
+        );
+      }
+      const [ownedOrg] = await db
+        .select({ id: organizations.id })
+        .from(organizations)
+        .where(
+          and(
+            eq(organizations.id, competition.organizationId),
+            eq(organizations.ownerId, dbUser.id)
+          )
+        );
+      if (!ownedOrg) {
+        return NextResponse.json(
+          { error: "You do not own the organization for this competition" },
+          { status: 403 }
+        );
+      }
     }
 
     // Must be in "approved" status
@@ -121,10 +139,9 @@ export async function POST(
 
     // Look up the competition creator for email + notification
     const creatorId = competition.createdBy;
-    const [creator] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, creatorId));
+    const [creator] = creatorId
+      ? await db.select().from(users).where(eq(users.id, creatorId))
+      : [];
 
     if (creator) {
       // Create in-app notification
@@ -180,9 +197,6 @@ export async function POST(
     return NextResponse.json({ competition: updated });
   } catch (error) {
     console.error("POST /api/competitions/[id]/go-live error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to go live" },
-      { status: 500 }
-    );
+    return apiError(error, "Failed to go live");
   }
 }

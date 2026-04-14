@@ -281,7 +281,7 @@ export async function validateSubmission(
         .join(", ");
 
       await createNotification({
-        userId: submission.submittedBy,
+        userId: submission.submittedBy!,
         type: notificationType,
         title:
           finalStatus === "invalid"

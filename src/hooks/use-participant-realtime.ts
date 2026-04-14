@@ -92,22 +92,22 @@ export function useParticipantRealtime(userId: string) {
 
   // Participant-scoped channel
   useRealtimeChannel(channels.participant(userId), {
-    [EVENTS.PARTICIPANT_SUBMISSION_STATUS]: (data: ParticipantSubmissionStatusPayload) =>
-      dispatch({ type: "SUBMISSION_STATUS", payload: data }),
-    [EVENTS.PARTICIPANT_SCORE_AVAILABLE]: (data: ParticipantScorePayload) =>
-      dispatch({ type: "SCORE_AVAILABLE", payload: data }),
-    [EVENTS.PARTICIPANT_TEAM_UPDATE]: (data: ParticipantTeamUpdatePayload) =>
-      dispatch({ type: "TEAM_UPDATE", payload: data }),
-    [EVENTS.PARTICIPANT_RANK_UPDATED]: (data: ParticipantScorePayload) =>
-      dispatch({ type: "SCORE_AVAILABLE", payload: data }),
-    [EVENTS.PARTICIPANT_ACHIEVEMENT]: (data: ParticipantAchievementPayload) =>
-      dispatch({ type: "ACHIEVEMENT", payload: data }),
+    [EVENTS.PARTICIPANT_SUBMISSION_STATUS]: (data: unknown) =>
+      dispatch({ type: "SUBMISSION_STATUS", payload: data as ParticipantSubmissionStatusPayload }),
+    [EVENTS.PARTICIPANT_SCORE_AVAILABLE]: (data: unknown) =>
+      dispatch({ type: "SCORE_AVAILABLE", payload: data as ParticipantScorePayload }),
+    [EVENTS.PARTICIPANT_TEAM_UPDATE]: (data: unknown) =>
+      dispatch({ type: "TEAM_UPDATE", payload: data as ParticipantTeamUpdatePayload }),
+    [EVENTS.PARTICIPANT_RANK_UPDATED]: (data: unknown) =>
+      dispatch({ type: "SCORE_AVAILABLE", payload: data as ParticipantScorePayload }),
+    [EVENTS.PARTICIPANT_ACHIEVEMENT]: (data: unknown) =>
+      dispatch({ type: "ACHIEVEMENT", payload: data as ParticipantAchievementPayload }),
   });
 
   // User notification channel
   useRealtimeChannel(channels.user(userId), {
-    [EVENTS.NOTIFICATION]: (data: NotificationPayload) =>
-      dispatch({ type: "NOTIFICATION", payload: data }),
+    [EVENTS.NOTIFICATION]: (data: unknown) =>
+      dispatch({ type: "NOTIFICATION", payload: data as NotificationPayload }),
   });
 
   return state;

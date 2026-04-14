@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 import { competitions, organizations } from "@/lib/db/schema";
 import { eq, and, or, ilike, desc, asc, sql } from "drizzle-orm";
+import { Suspense } from "react";
+import { extractTagsFromRows } from "@/lib/db/tag-queries";
 import { CompetitionCard } from "@/components/competitions/competition-card";
 import { CompetitionFilters } from "@/components/competitions/competition-filters";
 import { Trophy, Building2, Sparkles } from "lucide-react";
@@ -140,7 +142,7 @@ export default async function CompetitionsMarketplace({
           ORDER BY cnt DESC
           LIMIT 15`
     );
-    popularTags = (tagRows as unknown as Array<{ tag: string }>).map((r) => r.tag).filter(Boolean);
+    popularTags = extractTagsFromRows(tagRows);
   } catch {
     popularTags = [];
   }
@@ -202,7 +204,9 @@ export default async function CompetitionsMarketplace({
 
       {/* ── Main Content ── */}
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <CompetitionFilters popularTags={popularTags} />
+        <Suspense fallback={null}>
+          <CompetitionFilters popularTags={popularTags} />
+        </Suspense>
 
         {results.length === 0 ? (
           /* ── Empty State ── */

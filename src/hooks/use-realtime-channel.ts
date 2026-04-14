@@ -11,7 +11,13 @@ function getPusherClient(): PusherClient | null {
   if (!key || !cluster) return null;
 
   if (!pusherInstance) {
-    pusherInstance = new PusherClient(key, { cluster });
+    pusherInstance = new PusherClient(key, {
+      cluster,
+      channelAuthorization: {
+        endpoint: "/api/pusher/auth",
+        transport: "ajax",
+      },
+    });
   }
   return pusherInstance;
 }
@@ -36,8 +42,7 @@ export function useRealtimeChannel(
 
     const events = Object.keys(bindingsRef.current);
     const handlers = events.map((event) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const handler = (data: any) => bindingsRef.current[event]?.(data);
+      const handler = (data: unknown) => bindingsRef.current[event]?.(data);
       ch.bind(event, handler);
       return { event, handler };
     });
@@ -54,11 +59,10 @@ export function useRealtimeChannel(
 /**
  * Subscribe to a single event on a channel. Convenience wrapper.
  */
-export function useRealtimeEvent(
+export function useRealtimeEvent<T = unknown>(
   channel: string,
   event: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  callback: (data: any) => void
+  callback: (data: T) => void
 ): void {
   const callbackRef = useRef(callback);
   callbackRef.current = callback;
@@ -68,8 +72,7 @@ export function useRealtimeEvent(
     if (!pusher) return;
 
     const ch = pusher.subscribe(channel);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const handler = (data: any) => callbackRef.current(data);
+    const handler = (data: T) => callbackRef.current(data);
     ch.bind(event, handler);
 
     return () => {

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { PageHeader } from "@/components/shared/page-header";
 import { WizardShell } from "@/components/competitions/wizard/wizard-shell";
 import { StepBasicInfo } from "@/components/competitions/wizard/step-basic-info";
@@ -28,7 +29,12 @@ const STEP_COMPONENTS: Record<(typeof WIZARD_STEPS)[number], React.ComponentType
 };
 
 export default function NewCompetitionPage() {
-  const { currentStep } = useCompetitionForm();
+  const { currentStep, reset } = useCompetitionForm();
+
+  useEffect(() => {
+    reset();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const currentStepKey = WIZARD_STEPS[currentStep];
   const StepComponent = STEP_COMPONENTS[currentStepKey];
 

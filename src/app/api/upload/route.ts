@@ -1,15 +1,16 @@
+// TODO: Add rate limiting (@upstash/ratelimit) — currently unprotected
 import { serverAuth } from "@/lib/auth/server-auth";
 import { NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import crypto from "crypto";
+import { apiError } from "@/lib/api-error";
 
 const MAX_SIZE = 2 * 1024 * 1024; // 2MB
 const ALLOWED_TYPES = [
   "image/png",
   "image/jpeg",
   "image/webp",
-  "image/svg+xml",
   "image/gif",
 ];
 
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
     if (!ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json(
         {
-          error: `Invalid file type: ${file.type}. Allowed: PNG, JPEG, WebP, SVG, GIF`,
+          error: `Invalid file type: ${file.type}. Allowed: PNG, JPEG, WebP, GIF`,
         },
         { status: 400 }
       );
@@ -51,8 +52,8 @@ export async function POST(req: Request) {
     const ext = file.name.split(".").pop() || "png";
     const uniqueName = `${crypto.randomBytes(8).toString("hex")}-${Date.now()}.${ext}`;
 
-    // Save to public/uploads for development
-    const uploadsDir = path.join(process.cwd(), "public", "uploads");
+    // TODO: migrate to Azure Blob Storage
+    const uploadsDir = path.join("/tmp", "uploads");
     await mkdir(uploadsDir, { recursive: true });
 
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -64,9 +65,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ url });
   } catch (error) {
     console.error("POST /api/upload error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to upload file" },
-      { status: 500 }
-    );
+    return apiError(error, "Failed to upload file");
   }
 }

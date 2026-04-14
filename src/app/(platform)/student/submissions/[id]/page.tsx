@@ -1,4 +1,5 @@
 import { serverAuth } from "@/lib/auth/server-auth";
+import Image from "next/image";
 import { db } from "@/lib/db";
 import {
   teams,
@@ -297,10 +298,12 @@ export default async function SubmissionDetailPage({
                       rel="noopener noreferrer"
                       className="group relative block overflow-hidden rounded-lg border"
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                      <Image
                         src={url}
                         alt={`Screenshot ${index + 1}`}
+                        width={800}
+                        height={450}
+                        unoptimized
                         className="aspect-video w-full object-cover transition-transform group-hover:scale-105"
                       />
                       <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">

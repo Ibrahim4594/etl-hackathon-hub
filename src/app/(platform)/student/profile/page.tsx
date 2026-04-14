@@ -66,17 +66,7 @@ const ACHIEVEMENT_LABELS: Record<
   },
 };
 
-const COMPETITION_STATUS_COLORS: Record<string, string> = {
-  active: "bg-green-500/10 text-green-400 border-green-500/20",
-  judging: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-  completed: "bg-muted text-muted-foreground border-border",
-  approved: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  cancelled: "bg-red-500/10 text-red-400 border-red-500/20",
-};
-
-function formatStatus(status: string): string {
-  return status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
+import { COMPETITION_STATUS_COLORS, formatStatus } from "@/lib/constants/status-colors";
 
 export default async function StudentProfilePage() {
   const { userId } = await serverAuth();

@@ -17,7 +17,7 @@ import { channels, EVENTS } from "@/lib/services/pusher-channels";
  */
 export async function POST(req: Request) {
   if (process.env.NODE_ENV === "production") {
-    return NextResponse.json({ error: "Not available in production" }, { status: 403 });
+    return new Response("Not found", { status: 404 });
   }
 
   const body = await req.json();

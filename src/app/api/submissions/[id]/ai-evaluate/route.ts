@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { evaluateSubmission } from "@/lib/services/ai-judge";
 import { triggerEvent } from "@/lib/services/pusher";
 import { channels, EVENTS } from "@/lib/services/pusher-channels";
+import { apiError } from "@/lib/api-error";
 
 export async function POST(
   req: Request,
@@ -100,7 +101,7 @@ export async function POST(
 
       // Notify participant with score
       triggerEvent(
-        channels.participant(updatedSub.submittedBy),
+        channels.participant(updatedSub.submittedBy!),
         EVENTS.PARTICIPANT_SCORE_AVAILABLE,
         {
           competitionId: updatedSub.competitionId,
@@ -135,9 +136,6 @@ export async function POST(
     });
   } catch (error) {
     console.error("AI evaluation endpoint error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to run AI evaluation" },
-      { status: 500 }
-    );
+    return apiError(error, "Failed to run AI evaluation");
   }
 }

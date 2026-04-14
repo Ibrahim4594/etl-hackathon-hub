@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +21,7 @@ interface TeamInviteDialogProps {
 }
 
 export function TeamInviteDialog({ teamId }: TeamInviteDialogProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [inviteCode, setInviteCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -41,8 +43,7 @@ export function TeamInviteDialog({ teamId }: TeamInviteDialogProps) {
       toast.success("Successfully joined the team!");
       setOpen(false);
       setInviteCode("");
-      // Delay reload slightly to let Clerk session sync
-      setTimeout(() => window.location.reload(), 500);
+      router.refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to join team");
     } finally {

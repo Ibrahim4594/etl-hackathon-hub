@@ -4,6 +4,7 @@ import { competitions, organizations, users, competitionSponsors } from "@/lib/d
 import { eq, and, or, desc, asc, ilike, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { competitionCreateSchema } from "@/lib/validators/competition";
+import { apiError } from "@/lib/api-error";
 
 function slugify(text: string): string {
   return text
@@ -141,10 +142,7 @@ export async function GET(req: Request) {
     return response;
   } catch (error) {
     console.error("GET /api/competitions error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch competitions" },
-      { status: 500 }
-    );
+    return apiError(error, "Failed to fetch competitions");
   }
 }
 
@@ -295,9 +293,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ competition: result }, { status: 201 });
   } catch (error) {
     console.error("POST /api/competitions error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to create competition" },
-      { status: 500 }
-    );
+    return apiError(error, "Failed to create competition");
   }
 }

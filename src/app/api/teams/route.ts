@@ -7,6 +7,7 @@ import { z } from "zod/v4";
 import crypto from "crypto";
 import { triggerEvent } from "@/lib/services/pusher";
 import { channels, EVENTS } from "@/lib/services/pusher-channels";
+import { apiError } from "@/lib/api-error";
 
 /**
  * GET /api/teams?competitionId=xxx
@@ -57,10 +58,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ team: membership });
   } catch (error) {
     console.error("GET /api/teams error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch team" },
-      { status: 500 }
-    );
+    return apiError(error, "Failed to fetch team");
   }
 }
 
@@ -136,9 +134,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, team });
   } catch (error) {
     console.error("POST /api/teams error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to create team" },
-      { status: 500 }
-    );
+    return apiError(error, "Failed to create team");
   }
 }

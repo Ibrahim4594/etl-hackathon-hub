@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { users, organizations, competitions, competitionSponsors } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { ensureDbUser } from "@/lib/auth/ensure-db-user";
+import { resolveOnboardingUser } from "@/lib/auth/resolve-onboarding-user";
 
 function slugify(text: string): string {
   return text
@@ -25,9 +25,13 @@ export async function POST() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const dbUser = await ensureDbUser(userId);
+    const dbUser = await resolveOnboardingUser(userId);
     if (!dbUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    if (dbUser.role !== "admin") {
+      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
 
     // Create demo organizations

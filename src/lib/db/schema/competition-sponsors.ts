@@ -29,6 +29,6 @@ export const competitionSponsors = pgTable("competition_sponsors", {
   displayOrder: integer("display_order").default(0),
   featured: boolean("featured").default(false),
   isOrganizer: boolean("is_organizer").default(false),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

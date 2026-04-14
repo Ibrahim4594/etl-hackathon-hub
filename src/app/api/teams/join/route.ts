@@ -5,6 +5,12 @@ import { eq, and, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { triggerEvent } from "@/lib/services/pusher";
 import { channels, EVENTS } from "@/lib/services/pusher-channels";
+import { apiError } from "@/lib/api-error";
+import { z } from "zod/v4";
+
+const joinSchema = z.object({
+  inviteCode: z.string().length(8).regex(/^[A-F0-9]{8}$/),
+});
 
 export async function POST(req: Request) {
   try {
@@ -19,10 +25,12 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const inviteCode = (body.inviteCode as string)?.trim().toUpperCase();
-    if (!inviteCode) {
-      return NextResponse.json({ error: "Invite code is required" }, { status: 400 });
+    const rawCode = typeof body.inviteCode === "string" ? body.inviteCode.trim().toUpperCase() : "";
+    const parsed = joinSchema.safeParse({ inviteCode: rawCode });
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid invite code" }, { status: 400 });
     }
+    const inviteCode = parsed.data.inviteCode;
 
     // Find team by invite code
     const [team] = await db
@@ -79,7 +87,7 @@ export async function POST(req: Request) {
 
     // Real-time: notify team lead about new member
     try {
-      triggerEvent(channels.participant(team.leadId), EVENTS.PARTICIPANT_TEAM_UPDATE, {
+      triggerEvent(channels.participant(team.leadId!), EVENTS.PARTICIPANT_TEAM_UPDATE, {
         teamId: team.id,
         teamName: team.name,
         competitionId: team.competitionId,
@@ -96,9 +104,6 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error("POST /api/teams/join error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to join team" },
-      { status: 500 }
-    );
+    return apiError(error, "Failed to join team");
   }
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Upload, X, Loader2, AlertCircle } from "lucide-react";
 
@@ -117,10 +118,12 @@ export function ImageUpload({
         {/* Preview / placeholder */}
         {value && !imgError ? (
           <div className={`relative overflow-hidden border bg-muted/30 ${previewCls}`}>
-            <img
+            <Image
               src={value}
               alt="Preview"
-              className="h-full w-full object-cover"
+              fill
+              unoptimized
+              className="object-cover"
               onError={() => setImgError(true)}
             />
             <button

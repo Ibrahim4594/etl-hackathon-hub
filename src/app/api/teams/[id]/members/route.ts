@@ -1,8 +1,9 @@
 import { serverAuth } from "@/lib/auth/server-auth";
 import { db } from "@/lib/db";
-import { users, teams, teamMembers } from "@/lib/db/schema";
+import { users, teams, teamMembers, competitions } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { apiError } from "@/lib/api-error";
 
 export async function GET(
   req: Request,
@@ -13,6 +14,39 @@ export async function GET(
     const { userId: clerkId } = await serverAuth();
     if (!clerkId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const [dbUser] = await db.select({ id: users.id, role: users.role }).from(users).where(eq(users.clerkId, clerkId));
+    if (!dbUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const [team] = await db.select().from(teams).where(eq(teams.id, teamId));
+    if (!team) {
+      return NextResponse.json({ error: "Team not found" }, { status: 404 });
+    }
+
+    // Check access: must be a team member, the competition organizer, or admin
+    if (dbUser.role !== "admin") {
+      const [membership] = await db
+        .select({ id: teamMembers.id })
+        .from(teamMembers)
+        .where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, dbUser.id)));
+
+      const isMember = membership !== undefined;
+
+      let isOrganizer = false;
+      if (!isMember) {
+        const [comp] = await db
+          .select({ createdBy: competitions.createdBy })
+          .from(competitions)
+          .where(eq(competitions.id, team.competitionId));
+        isOrganizer = comp?.createdBy === dbUser.id;
+      }
+
+      if (!isMember && !isOrganizer) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
     }
 
     const members = await db
@@ -33,10 +67,7 @@ export async function GET(
     return NextResponse.json({ members });
   } catch (error) {
     console.error("GET /api/teams/[id]/members error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch team members" },
-      { status: 500 }
-    );
+    return apiError(error, "Failed to fetch team members");
   }
 }
 
@@ -80,9 +111,6 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("DELETE /api/teams/[id]/members error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to remove team member" },
-      { status: 500 }
-    );
+    return apiError(error, "Failed to remove team member");
   }
 }

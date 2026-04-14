@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { submissionUpdateSchema } from "@/lib/validators/submission";
 import { triggerEvent } from "@/lib/services/pusher";
 import { channels, EVENTS } from "@/lib/services/pusher-channels";
+import { apiError } from "@/lib/api-error";
 
 export async function GET(
   req: Request,
@@ -97,10 +98,7 @@ export async function GET(
     return NextResponse.json({ submission });
   } catch (error) {
     console.error("GET /api/submissions/[id] error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch submission" },
-      { status: 500 }
-    );
+    return apiError(error, "Failed to fetch submission");
   }
 }
 
@@ -191,9 +189,6 @@ export async function PATCH(
     return NextResponse.json({ success: true, submission: updated });
   } catch (error) {
     console.error("PATCH /api/submissions/[id] error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to update submission" },
-      { status: 500 }
-    );
+    return apiError(error, "Failed to update submission");
   }
 }

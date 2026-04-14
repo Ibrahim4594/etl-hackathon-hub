@@ -1,3 +1,4 @@
+// TODO: Add rate limiting (@upstash/ratelimit) — currently unprotected
 import { serverAuth } from "@/lib/auth/server-auth";
 import { db } from "@/lib/db";
 import {
@@ -11,6 +12,24 @@ import { eq, and } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { sendEmail } from "@/lib/services/email";
 import { createNotification } from "@/lib/services/notification";
+import { apiError } from "@/lib/api-error";
+import { z } from "zod/v4";
+
+const judgeInviteSchema = z.object({
+  email: z.string().email(),
+  name: z.string().min(1).max(200),
+  competitionId: z.string().uuid(),
+  expertise: z.string().max(500).optional(),
+});
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 /**
  * POST /api/judge/invite
@@ -34,17 +53,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Only organizers or admins can invite judges" }, { status: 403 });
     }
 
-    const body = await req.json();
-    const { email, name, competitionId, expertise } = body as {
-      email?: string;
-      name?: string;
-      competitionId?: string;
-      expertise?: string;
-    };
-
-    if (!email || !competitionId || !name) {
-      return NextResponse.json({ error: "name, email, and competitionId are required" }, { status: 400 });
+    const rawBody = await req.json();
+    const parsed = judgeInviteSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid request body", issues: parsed.error.issues }, { status: 400 });
     }
+    const { email, name, competitionId, expertise } = parsed.data;
 
     // Fetch competition with org name
     const [competition] = await db
@@ -62,6 +76,19 @@ export async function POST(req: Request) {
 
     if (dbUser.role === "sponsor" && competition.createdBy !== dbUser.id) {
       return NextResponse.json({ error: "You can only invite judges to your own competitions" }, { status: 403 });
+    }
+
+    // H9: Check if an invitation for this email+competition already exists
+    const [existingInvitation] = await db
+      .select({ id: judgeInvitations.id })
+      .from(judgeInvitations)
+      .where(and(
+        eq(judgeInvitations.competitionId, competitionId),
+        eq(judgeInvitations.judgeEmail, email.trim().toLowerCase())
+      ));
+
+    if (existingInvitation) {
+      return NextResponse.json({ error: "An invitation has already been sent to this email for this competition" }, { status: 409 });
     }
 
     // Check if judge already has an account AND is already assigned
@@ -108,8 +135,13 @@ export async function POST(req: Request) {
       acceptedAt: existingUser ? new Date() : null,
     });
 
-    // Send invitation email
+    // Send invitation email (HTML-escape user-supplied values)
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://competition-spark.vercel.app";
+    const safeName = escapeHtml(name.trim());
+    const safeOrgName = escapeHtml(competition.orgName ?? "");
+    const safeTitle = escapeHtml(competition.title);
+    const safeExpertise = expertise ? escapeHtml(expertise.trim()) : null;
+    const safeEmail = escapeHtml(email);
 
     try {
       await sendEmail({
@@ -123,17 +155,17 @@ export async function POST(req: Request) {
             </div>
             <div style="padding:30px;background:#f8fafa;border-radius:12px;">
               <h2 style="margin-top:0;">Judge Invitation</h2>
-              <p>Dear <strong>${name}</strong>,</p>
-              <p>You've been invited by <strong>${competition.orgName}</strong> to evaluate submissions for:</p>
+              <p>Dear <strong>${safeName}</strong>,</p>
+              <p>You've been invited by <strong>${safeOrgName}</strong> to evaluate submissions for:</p>
               <div style="background:white;border:1px solid #e5e7eb;border-radius:8px;padding:20px;margin:20px 0;">
-                <h3 style="margin-top:0;color:#0d9488;">${competition.title}</h3>
-                ${expertise ? `<p style="color:#666;margin-bottom:0;">Your expertise: ${expertise}</p>` : ""}
+                <h3 style="margin-top:0;color:#0d9488;">${safeTitle}</h3>
+                ${safeExpertise ? `<p style="color:#666;margin-bottom:0;">Your expertise: ${safeExpertise}</p>` : ""}
               </div>
               <p>To get started:</p>
               <ol style="color:#444;line-height:1.8;">
                 <li>Click the button below to visit Spark</li>
                 <li>Sign in with your Google account</li>
-                <li>Select <strong>"Judge"</strong> and complete your profile</li>
+                <li>Select <strong>&quot;Judge&quot;</strong> and complete your profile</li>
                 <li>Start reviewing submissions!</li>
               </ol>
               <div style="text-align:center;margin:30px 0;">
@@ -141,7 +173,7 @@ export async function POST(req: Request) {
                   Accept Invitation
                 </a>
               </div>
-              <p style="color:#999;font-size:13px;">This invitation was sent to ${email}.</p>
+              <p style="color:#999;font-size:13px;">This invitation was sent to ${safeEmail}.</p>
             </div>
           </div>
         `,
@@ -157,9 +189,6 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error("Judge invite error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to invite judge" },
-      { status: 500 }
-    );
+    return apiError(error, "Failed to invite judge");
   }
 }

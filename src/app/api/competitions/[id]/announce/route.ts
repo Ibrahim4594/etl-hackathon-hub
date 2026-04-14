@@ -12,6 +12,12 @@ import { NextResponse } from "next/server";
 import { triggerEvent } from "@/lib/services/pusher";
 import { channels, EVENTS } from "@/lib/services/pusher-channels";
 import { createNotification } from "@/lib/services/notification";
+import { apiError } from "@/lib/api-error";
+import { z } from "zod/v4";
+
+const announceSchema = z.object({
+  winnerIds: z.array(z.string().uuid()).max(20).optional(),
+});
 
 /**
  * POST /api/competitions/[id]/announce
@@ -62,18 +68,20 @@ export async function POST(
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    if (
-      competition.status !== "judging" &&
-      competition.status !== "active"
-    ) {
+    // C8: Only allow judging status
+    if (competition.status !== "judging") {
       return NextResponse.json(
-        { error: "Competition must be in judging or active status to announce winners" },
+        { error: "Competition must be in judging phase to announce winners" },
         { status: 400 }
       );
     }
 
     const body = await req.json();
-    const { winnerIds } = body as { winnerIds?: string[] };
+    const parsed = announceSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid data", issues: parsed.error.issues }, { status: 400 });
+    }
+    const { winnerIds } = parsed.data;
 
     // Get ranked submissions
     const rankedSubs = await db
@@ -95,35 +103,36 @@ export async function POST(
       ? rankedSubs.filter((s) => winnerIds.includes(s.id))
       : rankedSubs.slice(0, 3);
 
-    // Update winner submission statuses
-    for (let i = 0; i < winners.length; i++) {
-      const status = i === 0 ? "winner" : "finalist";
-      await db
-        .update(submissions)
-        .set({ status, rank: i + 1, updatedAt: new Date() })
-        .where(eq(submissions.id, winners[i].id));
-    }
-
     // Mark remaining top entries as finalists
     const finalistCount = competition.finalistCount ?? 10;
-    const finalists = rankedSubs.slice(
-      winners.length,
-      finalistCount
-    );
-    for (const f of finalists) {
-      if (!winners.find((w) => w.id === f.id)) {
-        await db
-          .update(submissions)
-          .set({ status: "finalist", updatedAt: new Date() })
-          .where(eq(submissions.id, f.id));
-      }
-    }
+    const finalists = rankedSubs.slice(winners.length, finalistCount);
 
-    // Update competition status to completed
-    await db
-      .update(competitions)
-      .set({ status: "completed", updatedAt: new Date() })
-      .where(eq(competitions.id, id));
+    // C9: Wrap all DB mutations in a transaction
+    await db.transaction(async (tx) => {
+      // Update winner submission statuses
+      for (let i = 0; i < winners.length; i++) {
+        const status = i === 0 ? "winner" : "finalist";
+        await tx
+          .update(submissions)
+          .set({ status, rank: i + 1, updatedAt: new Date() })
+          .where(eq(submissions.id, winners[i].id));
+      }
+
+      for (const f of finalists) {
+        if (!winners.find((w) => w.id === f.id)) {
+          await tx
+            .update(submissions)
+            .set({ status: "finalist", updatedAt: new Date() })
+            .where(eq(submissions.id, f.id));
+        }
+      }
+
+      // Update competition status to completed
+      await tx
+        .update(competitions)
+        .set({ status: "completed", updatedAt: new Date() })
+        .where(eq(competitions.id, id));
+    });
 
     // Notify all participants
     const allMembers = await db
@@ -151,7 +160,6 @@ export async function POST(
       .where(eq(users.role, "admin"));
 
     for (const admin of adminUsers) {
-      // Skip if the announcer is already an admin (they already know)
       if (admin.id === dbUser.id) continue;
 
       await createNotification({
@@ -180,9 +188,6 @@ export async function POST(
     });
   } catch (error) {
     console.error("Announce winners error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to announce winners" },
-      { status: 500 }
-    );
+    return apiError(error, "Failed to announce winners");
   }
 }

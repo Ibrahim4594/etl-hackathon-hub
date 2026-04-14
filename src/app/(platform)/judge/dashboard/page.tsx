@@ -8,7 +8,7 @@ import {
   submissions,
   teams,
 } from "@/lib/db/schema";
-import { eq, and, sql, desc } from "drizzle-orm";
+import { eq, and, sql, desc, inArray } from "drizzle-orm";
 import { resolveOnboardingUser } from "@/lib/auth/resolve-onboarding-user";
 import { serverAuth } from "@/lib/auth/server-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +25,8 @@ import {
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { COMPETITION_STATUS_COLORS, formatStatus } from "@/lib/constants/status-colors";
+
+export const revalidate = 60;
 
 export default async function JudgeDashboardPage() {
   const { userId } = await serverAuth();
@@ -51,34 +53,29 @@ export default async function JudgeDashboardPage() {
 
   const compIds = assignedComps.map((c) => c.competitionId);
 
-  // Count total submissions across assigned competitions
+  // Count total submissions across assigned competitions (parallelized)
   let totalAssigned = 0;
   let totalScored = 0;
+  let recentEvals: {
+    submissionId: string;
+    submissionTitle: string | null;
+    teamName: string;
+    competitionTitle: string;
+    compositeScore: number | null;
+    scoredAt: Date | null;
+  }[] = [];
 
   if (compIds.length > 0) {
-    const [{ count: subCount }] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(submissions)
-      .where(
-        sql`${submissions.competitionId} IN (${sql.join(
-          compIds.map((id) => sql`${id}`),
-          sql`, `
-        )})`
-      );
-    totalAssigned = Number(subCount);
-
-    const [{ count: evalCount }] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(judgeEvaluations)
-      .where(eq(judgeEvaluations.judgeId, dbUser.id));
-    totalScored = Number(evalCount);
-  }
-
-  const pendingCount = totalAssigned - totalScored;
-
-  // Recent evaluations
-  const recentEvals = compIds.length > 0
-    ? await db
+    const [[subRow], [evalRow], evalsResult] = await Promise.all([
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(submissions)
+        .where(inArray(submissions.competitionId, compIds)),
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(judgeEvaluations)
+        .where(eq(judgeEvaluations.judgeId, dbUser.id)),
+      db
         .select({
           submissionId: judgeEvaluations.submissionId,
           submissionTitle: submissions.title,
@@ -93,8 +90,14 @@ export default async function JudgeDashboardPage() {
         .innerJoin(competitions, eq(submissions.competitionId, competitions.id))
         .where(eq(judgeEvaluations.judgeId, dbUser.id))
         .orderBy(desc(judgeEvaluations.createdAt))
-        .limit(5)
-    : [];
+        .limit(5),
+    ]);
+    totalAssigned = Number(subRow.count);
+    totalScored = Number(evalRow.count);
+    recentEvals = evalsResult;
+  }
+
+  const pendingCount = totalAssigned - totalScored;
 
   const name = [dbUser.firstName, dbUser.lastName].filter(Boolean).join(" ") || "Judge";
 

@@ -7,6 +7,7 @@ import crypto from "crypto";
 import { triggerEvent } from "@/lib/services/pusher";
 import { channels, EVENTS } from "@/lib/services/pusher-channels";
 import type { TeamRegisteredPayload } from "@/lib/services/pusher-channels";
+import { apiError } from "@/lib/api-error";
 
 /**
  * POST /api/competitions/[id]/register
@@ -134,9 +135,6 @@ export async function POST(
     });
   } catch (error) {
     console.error("POST /api/competitions/[id]/register error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to register for competition" },
-      { status: 500 }
-    );
+    return apiError(error, "Failed to register for competition");
   }
 }

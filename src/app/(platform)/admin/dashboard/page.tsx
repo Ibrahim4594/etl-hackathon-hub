@@ -35,54 +35,53 @@ import {
 } from "lucide-react";
 import { COMPETITION_STATUS_COLORS, SUBMISSION_STATUS_COLORS, formatStatus } from "@/lib/constants/status-colors";
 
+export const revalidate = 60;
+
 export default async function AdminDashboardPage() {
   const { userId } = await serverAuth();
   if (!userId) redirect("/sign-in");
   const dbUser = await resolveOnboardingUser(userId);
   if (!dbUser || dbUser.role !== "admin") redirect("/");
 
-  // Fetch all stats in parallel
+  // Fetch all stats — consolidated into 6 queries using FILTER aggregation
   const [
-    [{ totalUsers }],
-    [{ totalStudents }],
-    [{ totalSponsors }],
-    [{ totalJudges }],
-    [{ totalComps }],
-    [{ activeComps }],
-    [{ pendingReview }],
-    [{ approvedComps }],
-    [{ totalSubs }],
-    [{ validSubs }],
-    [{ flaggedSubs }],
-    [{ invalidSubs }],
-    [{ totalOrgs }],
-    [{ verifiedOrgs }],
-    [{ pendingOrgs }],
+    [userStats],
+    [compStats],
+    [subStats],
+    [orgStats],
     [{ totalTeams }],
     [{ totalEvals }],
+    recentCompetitions,
+    recentSubmissions,
+    pendingOrgsList,
   ] = await Promise.all([
-    db.select({ totalUsers: sql<number>`count(*)` }).from(users),
-    db.select({ totalStudents: sql<number>`count(*)` }).from(users).where(eq(users.role, "student")),
-    db.select({ totalSponsors: sql<number>`count(*)` }).from(users).where(eq(users.role, "sponsor")),
-    db.select({ totalJudges: sql<number>`count(*)` }).from(users).where(eq(users.role, "judge")),
-    db.select({ totalComps: sql<number>`count(*)` }).from(competitions),
-    db.select({ activeComps: sql<number>`count(*)` }).from(competitions).where(or(eq(competitions.status, "active"), eq(competitions.status, "judging"))),
-    db.select({ pendingReview: sql<number>`count(*)` }).from(competitions).where(eq(competitions.status, "pending_review")),
-    db.select({ approvedComps: sql<number>`count(*)` }).from(competitions).where(eq(competitions.status, "approved")),
-    db.select({ totalSubs: sql<number>`count(*)` }).from(submissions),
-    db.select({ validSubs: sql<number>`count(*)` }).from(submissions).where(eq(submissions.status, "valid")),
-    db.select({ flaggedSubs: sql<number>`count(*)` }).from(submissions).where(eq(submissions.status, "flagged")),
-    db.select({ invalidSubs: sql<number>`count(*)` }).from(submissions).where(eq(submissions.status, "invalid")),
-    db.select({ totalOrgs: sql<number>`count(*)` }).from(organizations),
-    db.select({ verifiedOrgs: sql<number>`count(*)` }).from(organizations).where(eq(organizations.verification, "verified")),
-    db.select({ pendingOrgs: sql<number>`count(*)` }).from(organizations).where(eq(organizations.verification, "pending")),
+    db.select({
+      totalUsers: sql<number>`count(*)`,
+      totalStudents: sql<number>`count(*) filter (where ${users.role} = 'student')`,
+      totalSponsors: sql<number>`count(*) filter (where ${users.role} = 'sponsor')`,
+      totalJudges: sql<number>`count(*) filter (where ${users.role} = 'judge')`,
+    }).from(users),
+    db.select({
+      totalComps: sql<number>`count(*)`,
+      activeComps: sql<number>`count(*) filter (where ${competitions.status} in ('active', 'judging'))`,
+      pendingReview: sql<number>`count(*) filter (where ${competitions.status} = 'pending_review')`,
+      approvedComps: sql<number>`count(*) filter (where ${competitions.status} = 'approved')`,
+    }).from(competitions),
+    db.select({
+      totalSubs: sql<number>`count(*)`,
+      validSubs: sql<number>`count(*) filter (where ${submissions.status} = 'valid')`,
+      flaggedSubs: sql<number>`count(*) filter (where ${submissions.status} = 'flagged')`,
+      invalidSubs: sql<number>`count(*) filter (where ${submissions.status} = 'invalid')`,
+    }).from(submissions),
+    db.select({
+      totalOrgs: sql<number>`count(*)`,
+      verifiedOrgs: sql<number>`count(*) filter (where ${organizations.verification} = 'verified')`,
+      pendingOrgs: sql<number>`count(*) filter (where ${organizations.verification} = 'pending')`,
+    }).from(organizations),
     db.select({ totalTeams: sql<number>`count(*)` }).from(teams),
     db.select({ totalEvals: sql<number>`count(*)` }).from(judgeEvaluations),
-  ]);
-
-  // Recent competitions (latest 5)
-  const recentCompetitions = await db
-    .select({
+    // Recent competitions (latest 5)
+    db.select({
       id: competitions.id,
       title: competitions.title,
       status: competitions.status,
@@ -90,14 +89,12 @@ export default async function AdminDashboardPage() {
       orgName: organizations.name,
       totalPrizePool: competitions.totalPrizePool,
     })
-    .from(competitions)
-    .innerJoin(organizations, eq(competitions.organizationId, organizations.id))
-    .orderBy(desc(competitions.createdAt))
-    .limit(5);
-
-  // Recent submissions (latest 5)
-  const recentSubmissions = await db
-    .select({
+      .from(competitions)
+      .innerJoin(organizations, eq(competitions.organizationId, organizations.id))
+      .orderBy(desc(competitions.createdAt))
+      .limit(5),
+    // Recent submissions (latest 5)
+    db.select({
       id: submissions.id,
       title: submissions.title,
       status: submissions.status,
@@ -105,24 +102,28 @@ export default async function AdminDashboardPage() {
       compTitle: competitions.title,
       teamName: teams.name,
     })
-    .from(submissions)
-    .innerJoin(competitions, eq(submissions.competitionId, competitions.id))
-    .innerJoin(teams, eq(submissions.teamId, teams.id))
-    .orderBy(desc(submissions.createdAt))
-    .limit(5);
-
-  // Pending org verifications
-  const pendingOrgsList = await db
-    .select({
+      .from(submissions)
+      .innerJoin(competitions, eq(submissions.competitionId, competitions.id))
+      .innerJoin(teams, eq(submissions.teamId, teams.id))
+      .orderBy(desc(submissions.createdAt))
+      .limit(5),
+    // Pending org verifications
+    db.select({
       id: organizations.id,
       name: organizations.name,
       contactEmail: organizations.contactEmail,
       createdAt: organizations.createdAt,
     })
-    .from(organizations)
-    .where(eq(organizations.verification, "pending"))
-    .orderBy(desc(organizations.createdAt))
-    .limit(5);
+      .from(organizations)
+      .where(eq(organizations.verification, "pending"))
+      .orderBy(desc(organizations.createdAt))
+      .limit(5),
+  ]);
+
+  const { totalUsers, totalStudents, totalSponsors, totalJudges } = userStats;
+  const { totalComps, activeComps, pendingReview, approvedComps } = compStats;
+  const { totalSubs, validSubs, flaggedSubs, invalidSubs } = subStats;
+  const { totalOrgs, verifiedOrgs, pendingOrgs } = orgStats;
 
   const pReview = Number(pendingReview);
   const pOrgs = Number(pendingOrgs);

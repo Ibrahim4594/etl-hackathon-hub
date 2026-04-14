@@ -12,29 +12,7 @@ import { Users, Trophy, Crown, UserCheck, FileText, ArrowRight } from "lucide-re
 import Link from "next/link";
 import { JoinTeamForm } from "@/components/teams/join-team-form";
 import { CopyInviteCode } from "@/components/teams/copy-invite-code";
-
-const COMPETITION_STATUS_COLORS: Record<string, string> = {
-  active: "bg-green-500/10 text-green-400 border-green-500/20",
-  judging: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-  completed: "bg-muted text-muted-foreground border-border",
-  approved: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  pending_review: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
-};
-
-const SUB_STATUS_COLORS: Record<string, string> = {
-  submitted: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  valid: "bg-green-500/10 text-green-400 border-green-500/20",
-  invalid: "bg-red-500/10 text-red-400 border-red-500/20",
-  flagged: "bg-orange-500/10 text-orange-400 border-orange-500/20",
-  ai_evaluated: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-  judged: "bg-primary/10 text-primary border-primary/20",
-  finalist: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
-  winner: "bg-green-500/10 text-green-400 border-green-500/20",
-};
-
-function formatStatus(status: string): string {
-  return status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
+import { COMPETITION_STATUS_COLORS, SUBMISSION_STATUS_COLORS, formatStatus } from "@/lib/constants/status-colors";
 
 export default async function StudentTeamsPage() {
   const { userId: clerkId } = await serverAuth();
@@ -222,7 +200,7 @@ export default async function StudentTeamsPage() {
                       <span className="truncate flex-1 font-medium">{sub.title}</span>
                       <span
                         className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${
-                          SUB_STATUS_COLORS[sub.status] ?? "border-border bg-muted text-muted-foreground"
+                          SUBMISSION_STATUS_COLORS[sub.status] ?? "border-border bg-muted text-muted-foreground"
                         }`}
                       >
                         {formatStatus(sub.status)}

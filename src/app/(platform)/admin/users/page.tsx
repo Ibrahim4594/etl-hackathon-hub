@@ -2,7 +2,7 @@ import { serverAuth } from "@/lib/auth/server-auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { users, organizations } from "@/lib/db/schema";
-import { desc, sql } from "drizzle-orm";
+import { desc, sql, count } from "drizzle-orm";
 import { resolveOnboardingUser } from "@/lib/auth/resolve-onboarding-user";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/table";
 import { Users } from "lucide-react";
 import { UserRoleSelect } from "./user-role-select";
+import Link from "next/link";
 
 const roleVariant: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
   admin: "destructive",
@@ -46,7 +47,13 @@ function formatRole(role: string | null): string {
   return roleDisplayName[role] ?? role.charAt(0).toUpperCase() + role.slice(1);
 }
 
-export default async function AdminUsersPage() {
+const PAGE_SIZE = 50;
+
+interface PageProps {
+  searchParams: Promise<{ page?: string }>;
+}
+
+export default async function AdminUsersPage({ searchParams }: PageProps) {
   const { userId } = await serverAuth();
   if (!userId) redirect("/sign-in");
 
@@ -56,26 +63,38 @@ export default async function AdminUsersPage() {
     redirect(dbUser.role ? `/${dbUser.role}/dashboard` : "/onboarding");
   }
 
-  // Fetch all users with their organization name (if organizer)
-  const allUsers = await db
-    .select({
-      id: users.id,
-      firstName: users.firstName,
-      lastName: users.lastName,
-      email: users.email,
-      role: users.role,
-      onboardingComplete: users.onboardingComplete,
-      university: users.university,
-      createdAt: users.createdAt,
-      orgName: sql<string | null>`(
-        SELECT ${organizations.name}
-        FROM ${organizations}
-        WHERE ${organizations.ownerId} = ${users.id}
-        LIMIT 1
-      )`,
-    })
-    .from(users)
-    .orderBy(desc(users.createdAt));
+  const { page: pageParam } = await searchParams;
+  const currentPage = Math.max(1, parseInt(pageParam || "1", 10));
+  const offset = (currentPage - 1) * PAGE_SIZE;
+
+  const [[{ total }], pageUsers] = await Promise.all([
+    db.select({ total: count() }).from(users),
+    db
+      .select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+        role: users.role,
+        onboardingComplete: users.onboardingComplete,
+        university: users.university,
+        createdAt: users.createdAt,
+        orgName: sql<string | null>`(
+          SELECT ${organizations.name}
+          FROM ${organizations}
+          WHERE ${organizations.ownerId} = ${users.id}
+          LIMIT 1
+        )`,
+      })
+      .from(users)
+      .orderBy(desc(users.createdAt))
+      .limit(PAGE_SIZE)
+      .offset(offset),
+  ]);
+
+  const totalCount = Number(total);
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
 
   return (
     <div className="space-y-8">
@@ -84,7 +103,7 @@ export default async function AdminUsersPage() {
         description="View and manage all platform users"
       />
 
-      {allUsers.length === 0 ? (
+      {totalCount === 0 ? (
         <EmptyState
           icon={Users}
           title="No users"
@@ -106,7 +125,7 @@ export default async function AdminUsersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {allUsers.map((user) => (
+                {pageUsers.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">
                       {user.firstName || user.lastName
@@ -141,9 +160,35 @@ export default async function AdminUsersPage() {
             </Table>
           </div>
 
-          <p className="text-sm text-muted-foreground">
-            Showing {allUsers.length} user{allUsers.length !== 1 ? "s" : ""}
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Showing {offset + 1}–{Math.min(safePage * PAGE_SIZE, totalCount)} of{" "}
+              {totalCount} user{totalCount !== 1 ? "s" : ""}
+            </p>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                {safePage > 1 && (
+                  <Link
+                    href={`?page=${safePage - 1}`}
+                    className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted"
+                  >
+                    Previous
+                  </Link>
+                )}
+                <span className="text-sm text-muted-foreground">
+                  Page {safePage} of {totalPages}
+                </span>
+                {safePage < totalPages && (
+                  <Link
+                    href={`?page=${safePage + 1}`}
+                    className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted"
+                  >
+                    Next
+                  </Link>
+                )}
+              </div>
+            )}
+          </div>
         </>
       )}
     </div>

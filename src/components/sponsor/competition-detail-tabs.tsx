@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { InviteJudgeDialog } from "@/components/judge/invite-judge-dialog";
 import { PublishButton } from "@/components/competitions/publish-button";
-import { QuickPublishButton } from "@/components/competitions/quick-publish-button";
 import { GoLiveButton } from "@/components/competitions/go-live-button";
 import { AnnounceWinnersDialog } from "@/components/competitions/announce-winners-dialog";
 import {
@@ -28,6 +27,7 @@ import {
   TrendingUp,
   Target,
 } from "lucide-react";
+import { COMPETITION_STATUS_CONFIG } from "@/lib/constants/status-colors";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -104,16 +104,6 @@ interface Props {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-const STATUS_CONFIG: Record<string, { color: string; bg: string; label: string }> = {
-  draft: { color: "text-zinc-400", bg: "bg-zinc-500/10", label: "Draft" },
-  pending_review: { color: "text-amber-400", bg: "bg-amber-500/10", label: "Pending Review" },
-  approved: { color: "text-blue-400", bg: "bg-blue-500/10", label: "Approved" },
-  active: { color: "text-emerald-400", bg: "bg-emerald-500/10", label: "Live" },
-  judging: { color: "text-purple-400", bg: "bg-purple-500/10", label: "Judging" },
-  completed: { color: "text-zinc-400", bg: "bg-zinc-500/10", label: "Completed" },
-  cancelled: { color: "text-red-400", bg: "bg-red-500/10", label: "Cancelled" },
-};
-
 const SUB_STATUS_CONFIG: Record<string, { color: string; icon: typeof CheckCircle2 }> = {
   submitted: { color: "text-blue-400", icon: Clock },
   validating: { color: "text-amber-400", icon: Clock },
@@ -148,7 +138,7 @@ export function CompetitionDetailTabs({
   totalParticipants,
 }: Props) {
   const c = competition;
-  const cfg = STATUS_CONFIG[c.status] ?? STATUS_CONFIG.draft;
+  const cfg = COMPETITION_STATUS_CONFIG[c.status] ?? COMPETITION_STATUS_CONFIG.draft;
   const isDraft = c.status === "draft";
   const isLive = c.status === "active";
   const totalSubs = submissions.length;
@@ -201,9 +191,6 @@ export function CompetitionDetailTabs({
                     </Link>
                   )}
                   {isDraft && <PublishButton competitionId={c.id} />}
-                  {(isDraft || c.status === "pending_review") && (
-                    <QuickPublishButton competitionId={c.id} />
-                  )}
                 </>
               )}
               {c.status === "approved" && (

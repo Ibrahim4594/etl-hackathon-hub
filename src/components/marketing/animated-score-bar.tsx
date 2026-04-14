@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import { useInView } from "framer-motion";
+import { useInView } from "motion/react";
 
 interface AnimatedScoreBarProps {
   label: string;
