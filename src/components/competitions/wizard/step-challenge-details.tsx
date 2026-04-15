@@ -13,7 +13,7 @@ import { toast } from "sonner";
 const DOC_ACCEPT = ".pdf,.doc,.docx,.pptx,.xlsx,.zip";
 
 export function StepChallengeDetails() {
-  const { formData, updateFormData } = useCompetitionForm();
+  const { formData, updateFormData, stepErrors } = useCompetitionForm();
   const [uploading, setUploading] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadIndexRef = useRef<number>(0);
@@ -102,7 +102,7 @@ export function StepChallengeDetails() {
 
         {/* Challenge Statement */}
         <div className="space-y-2">
-          <Label htmlFor="challengeStatement">Challenge Statement <span className="text-xs font-normal text-muted-foreground">(optional)</span></Label>
+          <Label htmlFor="challengeStatement">Challenge Statement <span className="text-destructive">*</span></Label>
           <Textarea
             id="challengeStatement"
             placeholder="Clearly describe the challenge or problem statement. What should participants build or solve?"
@@ -113,11 +113,12 @@ export function StepChallengeDetails() {
           <p className="text-xs text-muted-foreground">
             This is the main challenge description participants will see.
           </p>
+          {stepErrors.challengeStatement && <p className="text-xs text-destructive mt-1">{stepErrors.challengeStatement}</p>}
         </div>
 
         {/* Requirements */}
         <div className="space-y-2">
-          <Label htmlFor="requirements">Requirements <span className="text-xs font-normal text-muted-foreground">(optional)</span></Label>
+          <Label htmlFor="requirements">Requirements <span className="text-destructive">*</span></Label>
           <Textarea
             id="requirements"
             placeholder="List technical requirements, constraints, or guidelines. One per line recommended."
@@ -128,6 +129,7 @@ export function StepChallengeDetails() {
           <p className="text-xs text-muted-foreground">
             Specify any technical stack requirements, constraints, or mandatory features.
           </p>
+          {stepErrors.requirements && <p className="text-xs text-destructive mt-1">{stepErrors.requirements}</p>}
         </div>
 
         {/* Resources */}

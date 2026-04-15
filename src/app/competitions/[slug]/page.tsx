@@ -18,6 +18,7 @@ import {
   Award,
   CheckCircle2,
   Video,
+  ArrowLeft,
   Github,
   FileText,
   Link2,
@@ -31,6 +32,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { serverAuth } from "@/lib/auth/server-auth";
 import { RegistrationStatus } from "@/components/competitions/registration-status";
 import { getCategoryGradient } from "@/lib/utils/placeholder-gradient";
@@ -236,6 +238,23 @@ export default async function CompetitionDetailPage({ params }: Props) {
 
   return (
     <div className="min-h-screen">
+      {/* ── Top Nav Bar ── */}
+      <nav className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-md">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-3">
+            <Link href="/competitions">
+              <Button variant="ghost" size="sm" className="gap-1.5">
+                <ArrowLeft className="h-4 w-4" />
+                Back to Competitions
+              </Button>
+            </Link>
+          </div>
+          <Link href="/" className="text-sm font-bold text-primary">
+            SPARK
+          </Link>
+        </div>
+      </nav>
+
       {/* ── Hero Banner ── */}
       <section className="relative overflow-hidden border-b border-border">
         {/* Background */}

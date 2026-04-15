@@ -43,7 +43,7 @@ export const SUBMISSION_STATUS_COLORS: Record<string, string> = {
 };
 
 export const SUBMISSION_STATUS_LABELS: Record<string, string> = {
-  submitted: "Pending Review",
+  submitted: "Submitted",
   validating: "Under Review",
   valid: "Approved",
   invalid: "Rejected",

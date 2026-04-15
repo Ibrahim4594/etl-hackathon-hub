@@ -128,6 +128,11 @@ export const stepSchemas: Partial<Record<string, z.ZodTypeAny>> = {
     description: z.string().min(50, "Description must be at least 50 characters"),
   }),
 
+  "challenge-details": z.object({
+    challengeStatement: z.string().min(20, "Challenge statement must be at least 20 characters"),
+    requirements: z.string().min(10, "Requirements must be at least 10 characters"),
+  }),
+
   "participation-rules": z
     .object({
       minTeamSize: z.number().min(1, "Min team size must be at least 1").max(50, "Max team size is 50"),

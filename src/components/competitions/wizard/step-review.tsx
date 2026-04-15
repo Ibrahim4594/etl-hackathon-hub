@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCompetitionForm } from "@/hooks/use-competition-form";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -56,6 +56,7 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
 
 export function StepReview() {
   const { formData, reset } = useCompetitionForm();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("edit");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -138,13 +139,19 @@ export function StepReview() {
         <CardContent className="flex flex-col items-center justify-center py-16">
           <CheckCircle className="size-16 text-primary" />
           <h2 className="mt-4 text-xl font-semibold">
-            {editId ? "Competition Updated!" : "Competition Created!"}
+            {editId ? "Competition Updated!" : "Competition Sent for Review!"}
           </h2>
           <p className="mt-2 text-sm text-muted-foreground text-center max-w-md">
             {editId
               ? "Your changes have been saved successfully."
-              : "Your competition has been submitted for review. You will be notified once it is approved and published."}
+              : "Your competition has been submitted for review. An admin will review and approve it before it goes live. You will be notified once it is approved."}
           </p>
+          <Button
+            className="mt-6"
+            onClick={() => router.push("/sponsor/competitions")}
+          >
+            Go to Hackathon Management
+          </Button>
         </CardContent>
       </Card>
     );
@@ -354,7 +361,7 @@ export function StepReview() {
           </div>
 
           {/* Custom Submission Fields */}
-          {formData.customSubmissionFields && formData.customSubmissionFields.length > 0 && (
+          {formData.customSubmissionFields && formData.customSubmissionFields.filter(f => f.label.trim()).length > 0 && (
             <>
               <Separator />
               <div>

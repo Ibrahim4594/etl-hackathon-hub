@@ -11,9 +11,14 @@ import { ModeToggle } from "@/components/shared/mode-toggle";
 // UUID pattern to detect IDs in breadcrumbs
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const SEGMENT_LABELS: Record<string, string> = {
+  sponsor: "Organizer",
+};
+
 function formatSegment(seg: string): string {
   // Hide UUIDs — they'll be shown as "Details"
   if (UUID_RE.test(seg)) return "Details";
+  if (SEGMENT_LABELS[seg]) return SEGMENT_LABELS[seg];
   return seg
     .replace(/-/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());

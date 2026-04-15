@@ -64,7 +64,7 @@ export function StepParticipationRules() {
               id="minTeamSize"
               type="number"
               min={1}
-              max={50}
+              max={10}
               value={formData.minTeamSize || ""}
               onChange={(e) => {
                 if (e.target.value === "") { updateFormData({ minTeamSize: 0 }); return; }
@@ -72,12 +72,12 @@ export function StepParticipationRules() {
                 if (!isNaN(raw)) updateFormData({ minTeamSize: raw, ...(raw > 1 ? { allowSoloParticipation: false } : {}) });
               }}
               onBlur={() => {
-                const val = Math.max(1, Math.min(50, formData.minTeamSize || 1));
+                const val = Math.max(1, Math.min(10, formData.minTeamSize || 1));
                 updateFormData({ minTeamSize: val, ...(val > 1 ? { allowSoloParticipation: false } : {}) });
               }}
             />
             <p className="text-xs text-muted-foreground">
-              Minimum number of members per team (1–50)
+              Minimum number of members per team (1–10)
             </p>
             {stepErrors.minTeamSize && <p className="text-xs text-destructive mt-1">{stepErrors.minTeamSize}</p>}
           </div>

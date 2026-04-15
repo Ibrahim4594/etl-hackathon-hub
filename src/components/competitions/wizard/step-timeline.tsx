@@ -187,6 +187,7 @@ export function StepTimeline() {
                 label="Results Announcement"
                 value={formData.resultsDate ?? ""}
                 onChange={(val) => updateFormData({ resultsDate: val })}
+                error={stepErrors.resultsDate}
               />
             </div>
           </div>
