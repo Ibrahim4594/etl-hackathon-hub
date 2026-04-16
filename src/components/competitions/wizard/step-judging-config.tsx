@@ -12,21 +12,33 @@ import { Scale, Plus, Trash2, Bot, UserCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function StepJudgingConfig() {
-  const { formData, updateFormData, stepErrors } = useCompetitionForm();
+  const { formData, updateFormData, stepErrors, validateStep } = useCompetitionForm();
+
+  const redistributeWeights = (criteria: typeof formData.judgingCriteria) => {
+    if (criteria.length === 0) return criteria;
+    const equalShare = Math.floor(100 / criteria.length);
+    const remainder = 100 - equalShare * criteria.length;
+    return criteria.map((c, i) => ({
+      ...c,
+      weight: equalShare + (i === 0 ? remainder : 0),
+    }));
+  };
 
   const addCriterion = () => {
     if (formData.judgingCriteria.length >= 5) return;
+    const newCriteria = [
+      ...formData.judgingCriteria,
+      { name: "", description: "", weight: 0, maxScore: 100 },
+    ];
     updateFormData({
-      judgingCriteria: [
-        ...formData.judgingCriteria,
-        { name: "", description: "", weight: 0, maxScore: 100 },
-      ],
+      judgingCriteria: redistributeWeights(newCriteria),
     });
   };
 
   const removeCriterion = (index: number) => {
+    const remaining = formData.judgingCriteria.filter((_, i) => i !== index);
     updateFormData({
-      judgingCriteria: formData.judgingCriteria.filter((_, i) => i !== index),
+      judgingCriteria: redistributeWeights(remaining),
     });
   };
 
@@ -167,7 +179,7 @@ export function StepJudgingConfig() {
                 const raw = parseInt(e.target.value);
                 if (!isNaN(raw)) updateFormData({ finalistCount: raw });
               }}
-              onBlur={() => updateFormData({ finalistCount: Math.max(1, formData.finalistCount || 10) })}
+              onBlur={() => { updateFormData({ finalistCount: Math.max(1, formData.finalistCount || 10) }); validateStep(); }}
             />
             <p className="text-xs text-muted-foreground">
               How many top submissions advance to the finalist round for human judging.

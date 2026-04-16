@@ -13,7 +13,7 @@ import { toast } from "sonner";
 const DOC_ACCEPT = ".pdf,.doc,.docx,.pptx,.xlsx,.zip";
 
 export function StepChallengeDetails() {
-  const { formData, updateFormData, stepErrors } = useCompetitionForm();
+  const { formData, updateFormData, stepErrors, validateStep } = useCompetitionForm();
   const [uploading, setUploading] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadIndexRef = useRef<number>(0);
@@ -108,6 +108,7 @@ export function StepChallengeDetails() {
             placeholder="Clearly describe the challenge or problem statement. What should participants build or solve?"
             value={formData.challengeStatement ?? ""}
             onChange={(e) => updateFormData({ challengeStatement: e.target.value })}
+            onBlur={() => validateStep()}
             rows={6}
           />
           <p className="text-xs text-muted-foreground">
@@ -124,6 +125,7 @@ export function StepChallengeDetails() {
             placeholder="List technical requirements, constraints, or guidelines. One per line recommended."
             value={formData.requirements ?? ""}
             onChange={(e) => updateFormData({ requirements: e.target.value })}
+            onBlur={() => validateStep()}
             rows={4}
           />
           <p className="text-xs text-muted-foreground">

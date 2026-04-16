@@ -59,7 +59,7 @@ function generateAccessCode(): string {
 }
 
 export function StepBasicInfo() {
-  const { formData, updateFormData, stepErrors } = useCompetitionForm();
+  const { formData, updateFormData, stepErrors, validateStep } = useCompetitionForm();
   const [tagInput, setTagInput] = useState("");
   const [dbTags, setDbTags] = useState<string[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -157,6 +157,7 @@ export function StepBasicInfo() {
             placeholder="e.g., Pakistan AI Innovation Challenge 2026"
             value={formData.title}
             onChange={(e) => updateFormData({ title: e.target.value })}
+            onBlur={() => validateStep()}
             maxLength={100}
           />
           <p className="text-xs text-muted-foreground">
@@ -190,6 +191,7 @@ export function StepBasicInfo() {
             placeholder="Describe your competition in detail. What is the goal? What problem does it solve? Why should participants join?"
             value={formData.description}
             onChange={(e) => updateFormData({ description: e.target.value })}
+            onBlur={() => validateStep()}
             rows={5}
           />
           <p className="text-xs text-muted-foreground">

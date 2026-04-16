@@ -19,7 +19,7 @@ const TARGET_LABELS: Record<string, { label: string; emoji: string }> = {
 };
 
 export function StepParticipationRules() {
-  const { formData, updateFormData, stepErrors } = useCompetitionForm();
+  const { formData, updateFormData, stepErrors, validateStep } = useCompetitionForm();
 
   type TargetOption = (typeof targetParticipantOptions)[number];
 
@@ -74,6 +74,7 @@ export function StepParticipationRules() {
               onBlur={() => {
                 const val = Math.max(1, Math.min(10, formData.minTeamSize || 1));
                 updateFormData({ minTeamSize: val, ...(val > 1 ? { allowSoloParticipation: false } : {}) });
+                validateStep();
               }}
             />
             <p className="text-xs text-muted-foreground">
@@ -98,6 +99,7 @@ export function StepParticipationRules() {
               onBlur={() => {
                 const val = Math.max(1, Math.min(50, formData.maxTeamSize || 4));
                 updateFormData({ maxTeamSize: val });
+                validateStep();
               }}
             />
             <p className="text-xs text-muted-foreground">
