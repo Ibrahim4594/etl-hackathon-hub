@@ -11,6 +11,8 @@ import { InviteJudgeDialog } from "@/components/judge/invite-judge-dialog";
 import { PublishButton } from "@/components/competitions/publish-button";
 import { GoLiveButton } from "@/components/competitions/go-live-button";
 import { AnnounceWinnersDialog } from "@/components/competitions/announce-winners-dialog";
+import { AutoAssignButton } from "@/components/competitions/auto-assign-button";
+import { AssignSubmissionDialog } from "@/components/submissions/assign-submission-dialog";
 import {
   Edit,
   Trophy,
@@ -72,6 +74,9 @@ interface CompetitionData {
     maxScreenshots: number;
   } | null;
   judgingCriteria: { name: string; description: string; weight: number; maxScore: number }[];
+  coverImageUrl: string | null;
+  logoUrl: string | null;
+  organizationLogoUrl: string | null;
 }
 
 interface SubmissionRow {
@@ -294,6 +299,40 @@ export function CompetitionDetailTabs({
 
         {/* ─── Overview Tab ──────────────────────────────────────── */}
         <TabsContent value="overview" className="space-y-6">
+          {/* Cover image + logos banner */}
+          {(c.coverImageUrl || c.logoUrl || c.organizationLogoUrl) && (
+            <Card className="overflow-hidden border-border/50 shadow-sm">
+              {c.coverImageUrl && (
+                <div className="relative h-40 w-full sm:h-52">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={c.coverImageUrl}
+                    alt={`${c.title} cover`}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              )}
+              <CardContent className="flex flex-wrap items-center gap-4 p-4">
+                {c.logoUrl && (
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-card">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={c.logoUrl} alt="Competition logo" className="h-full w-full object-contain" />
+                  </div>
+                )}
+                {c.organizationLogoUrl && (
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-card">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={c.organizationLogoUrl} alt={c.organizationName} className="h-full w-full object-cover" />
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-muted-foreground">Organization</p>
+                  <p className="text-sm font-semibold">{c.organizationName}</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Draft edit note */}
           {isEditable && (
             <div className="flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
@@ -634,6 +673,20 @@ export function CompetitionDetailTabs({
 
         {/* ─── Submissions Tab ───────────────────────────────────── */}
         <TabsContent value="submissions" className="space-y-6">
+          {/* Assignment toolbar: auto-assign + manual per-row */}
+          {submissions.length > 0 && judges.length > 0 && (
+            <Card className="border-border/50 shadow-sm">
+              <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+                <div>
+                  <p className="text-sm font-semibold">Judge Assignment</p>
+                  <p className="text-xs text-muted-foreground">
+                    Auto-assign distributes submissions evenly across {judges.length} judge{judges.length !== 1 ? "s" : ""}. Or click Assign on any submission to pick manually.
+                  </p>
+                </div>
+                <AutoAssignButton competitionId={c.id} judgesCount={judges.length} />
+              </CardContent>
+            </Card>
+          )}
           {submissions.length === 0 ? (
             <Card className="border-border/50 shadow-sm">
               <CardContent className="flex flex-col items-center justify-center py-16 text-center">
@@ -651,6 +704,11 @@ export function CompetitionDetailTabs({
               {submissions.map((sub, i) => {
                 const scfg = SUB_STATUS_CONFIG[sub.status] ?? SUB_STATUS_CONFIG.submitted;
                 const StatusIcon = scfg.icon;
+                const judgeOptions = judges.map((j) => ({
+                  id: j.judgeId,
+                  name: [j.firstName, j.lastName].filter(Boolean).join(" ") || "Unnamed Judge",
+                  email: j.email,
+                }));
                 return (
                   <Card key={sub.id} className="border-border/50 shadow-md transition-all hover:border-primary/20 hover:shadow-sm">
                     <CardContent className="flex items-center gap-4 p-4">
@@ -695,6 +753,15 @@ export function CompetitionDetailTabs({
                           <p className="text-muted-foreground">Final</p>
                         </div>
                       </div>
+
+                      {/* Assign button */}
+                      {judges.length > 0 && (
+                        <AssignSubmissionDialog
+                          submissionId={sub.id}
+                          submissionTitle={sub.title}
+                          judges={judgeOptions}
+                        />
+                      )}
                     </CardContent>
                   </Card>
                 );

@@ -26,6 +26,8 @@ import {
 import Link from "next/link";
 import { SUBMISSION_STATUS_COLORS, getSubmissionStatusLabel } from "@/lib/constants/status-colors";
 import { AssignSubmissionDialog } from "@/components/submissions/assign-submission-dialog";
+import { AutoAssignButton } from "@/components/competitions/auto-assign-button";
+import { InviteJudgeDialog } from "@/components/judge/invite-judge-dialog";
 
 type FilterTab = "all" | "valid" | "flagged" | "invalid" | "finalists" | "winners";
 
@@ -178,6 +180,10 @@ export default async function SponsorSubmissionsPage({
             <p className="text-sm text-muted-foreground">{competition.title}</p>
           </div>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <InviteJudgeDialog competitionId={id} />
+          <AutoAssignButton competitionId={id} judgesCount={judges.length} />
+        </div>
       </div>
 
       {/* Stats Row */}
@@ -227,6 +233,27 @@ export default async function SponsorSubmissionsPage({
           </CardContent>
         </Card>
       </div>
+
+      {/* Assigned Judges Summary */}
+      {judges.length > 0 && (
+        <Card className="shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <p className="text-sm font-semibold">Assigned Judges ({judges.length})</p>
+                <p className="text-xs text-muted-foreground">Click &ldquo;Assign&rdquo; on any submission below to distribute manually, or use Auto-Assign above for round-robin.</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {judges.map((j) => (
+                  <Badge key={j.id} variant="outline" className="text-xs">
+                    {j.name}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filter Tabs */}
       <div className="flex flex-wrap gap-2">

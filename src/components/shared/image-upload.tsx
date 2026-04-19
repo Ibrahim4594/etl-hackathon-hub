@@ -180,9 +180,15 @@ export function ImageUpload({
               </>
             )}
           </Button>
-          <p className="text-[11px] text-muted-foreground">
-            PNG, JPG, WebP, SVG. Max {maxSizeMB}MB
-          </p>
+          {value && !imgError ? (
+            <p className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+              ✓ Image uploaded
+            </p>
+          ) : (
+            <p className="text-[11px] text-muted-foreground">
+              PNG, JPG, WebP, SVG. Max {maxSizeMB}MB
+            </p>
+          )}
           {value && (
             <button
               type="button"

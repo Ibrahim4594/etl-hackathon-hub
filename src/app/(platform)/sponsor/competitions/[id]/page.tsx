@@ -63,6 +63,9 @@ export default async function SponsorCompetitionDetailPage({
       prizes: competitions.prizes,
       submissionRequirements: competitions.submissionRequirements,
       judgingCriteria: competitions.judgingCriteria,
+      coverImageUrl: competitions.coverImageUrl,
+      logoUrl: competitions.logoUrl,
+      organizationLogoUrl: organizations.logoUrl,
     })
     .from(competitions)
     .innerJoin(organizations, eq(competitions.organizationId, organizations.id))
@@ -196,6 +199,9 @@ export default async function SponsorCompetitionDetailPage({
         prizes: (competition.prizes as { position: number; title: string; amount: number; currency: string; description?: string }[]) ?? [],
         submissionRequirements: competition.submissionRequirements as { githubRequired: boolean; videoRequired: boolean; deployedUrlRequired: boolean; pitchDeckRequired: boolean; maxScreenshots: number } | null,
         judgingCriteria: (competition.judgingCriteria as { name: string; description: string; weight: number; maxScore: number }[]) ?? [],
+        coverImageUrl: competition.coverImageUrl,
+        logoUrl: competition.logoUrl,
+        organizationLogoUrl: competition.organizationLogoUrl,
       }}
       submissions={competitionSubmissions.map((s) => ({
         ...s,
