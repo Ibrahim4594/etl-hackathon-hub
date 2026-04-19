@@ -3,7 +3,7 @@
 import { useCompetitionForm, WIZARD_STEPS, STEP_TITLES } from "@/hooks/use-competition-form";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ChevronLeft, ChevronRight, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface WizardShellProps {
@@ -11,10 +11,11 @@ interface WizardShellProps {
 }
 
 export function WizardShell({ children }: WizardShellProps) {
-  const { currentStep, setStep, validateStep } = useCompetitionForm();
+  const { currentStep, setStep, validateStep, stepErrors } = useCompetitionForm();
   const totalSteps = WIZARD_STEPS.length;
   const isFirstStep = currentStep === 0;
   const isLastStep = currentStep === totalSteps - 1;
+  const errorCount = Object.keys(stepErrors).length;
 
   return (
     <div className="space-y-8">
@@ -73,6 +74,23 @@ export function WizardShell({ children }: WizardShellProps) {
       </div>
 
       <Separator />
+
+      {/* Validation summary banner */}
+      {errorCount > 0 && (
+        <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+          <div className="flex-1 space-y-1">
+            <p className="text-sm font-semibold text-destructive">
+              Please fix {errorCount} {errorCount === 1 ? "issue" : "issues"} before continuing:
+            </p>
+            <ul className="list-inside list-disc space-y-0.5 text-xs text-destructive/90">
+              {Object.entries(stepErrors).slice(0, 5).map(([field, msg]) => (
+                <li key={field}>{msg}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
 
       {/* Step content */}
       <div className="min-h-[400px]">{children}</div>

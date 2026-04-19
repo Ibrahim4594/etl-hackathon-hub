@@ -647,55 +647,57 @@ export function SubmissionForm({ competitionId, teamId }: SubmissionFormProps) {
         </CardContent>
       </Card>
 
-      {/* Screenshots */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <ImagePlus className="h-5 w-5" />
-            Screenshots
-          </CardTitle>
-          <CardDescription>
-            Add up to 5 screenshot URLs of your project (optional)
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {screenshotUrls.map((url, index) => (
-            <div key={index} className="flex items-center gap-2">
-              <Input
-                placeholder={`Screenshot URL ${index + 1}`}
-                value={url}
-                onChange={(e) => updateScreenshotUrl(index, e.target.value)}
-              />
+      {/* Screenshots — only when organizer enables them */}
+      {requirements.maxScreenshots > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <ImagePlus className="h-5 w-5" />
+              Screenshots
+            </CardTitle>
+            <CardDescription>
+              Add up to {requirements.maxScreenshots} screenshot URL{requirements.maxScreenshots !== 1 ? "s" : ""} of your project
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {screenshotUrls.map((url, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <Input
+                  placeholder={`Screenshot URL ${index + 1}`}
+                  value={url}
+                  onChange={(e) => updateScreenshotUrl(index, e.target.value)}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0"
+                  aria-label="Remove screenshot"
+                  onClick={() => removeScreenshotField(index)}
+                >
+                  <Trash2 className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </div>
+            ))}
+            {screenshotUrls.length < requirements.maxScreenshots && (
               <Button
                 type="button"
-                variant="ghost"
-                size="icon"
-                className="shrink-0"
-                aria-label="Remove screenshot"
-                onClick={() => removeScreenshotField(index)}
+                variant="outline"
+                size="sm"
+                onClick={addScreenshotField}
               >
-                <Trash2 className="h-4 w-4 text-muted-foreground" />
+                <Plus className="mr-1 h-4 w-4" />
+                Add Screenshot
               </Button>
-            </div>
-          ))}
-          {screenshotUrls.length < 5 && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={addScreenshotField}
-            >
-              <Plus className="mr-1 h-4 w-4" />
-              Add Screenshot
-            </Button>
-          )}
-          {errors.screenshots && (
-            <p className="text-sm text-destructive">
-              {errors.screenshots.message}
-            </p>
-          )}
-        </CardContent>
-      </Card>
+            )}
+            {errors.screenshots && (
+              <p className="text-sm text-destructive">
+                {errors.screenshots.message}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Custom Fields */}
       {customFields.length > 0 && (
