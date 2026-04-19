@@ -352,8 +352,8 @@ export function SubmissionForm({ competitionId, teamId }: SubmissionFormProps) {
   };
 
   const addScreenshotField = () => {
-    if (screenshotUrls.length >= 5) {
-      toast.error("Maximum 5 screenshots allowed");
+    if (screenshotUrls.length >= requirements.maxScreenshots) {
+      toast.error(`Maximum ${requirements.maxScreenshots} screenshot${requirements.maxScreenshots !== 1 ? "s" : ""} allowed`);
       return;
     }
     setScreenshotUrls([...screenshotUrls, ""]);
