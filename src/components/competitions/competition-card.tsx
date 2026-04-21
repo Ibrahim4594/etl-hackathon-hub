@@ -48,10 +48,16 @@ export function CompetitionCard({
   status,
   targetParticipants,
 }: CompetitionCardProps) {
-  const statusCfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.active;
+  // If submission deadline has passed, treat as ended even if DB still says "active"
+  const submissionEndPassed = submissionEnd ? isPast(new Date(submissionEnd)) : false;
+  const effectiveStatus =
+    (status === "active" || status === "approved") && submissionEndPassed
+      ? "completed"
+      : status;
+  const statusCfg = STATUS_CONFIG[effectiveStatus] ?? STATUS_CONFIG.active;
 
   const deadlineLabel = submissionEnd
-    ? isPast(new Date(submissionEnd))
+    ? submissionEndPassed
       ? "Ended"
       : formatDistanceToNow(new Date(submissionEnd), { addSuffix: false }) + " left"
     : null;
@@ -96,7 +102,7 @@ export function CompetitionCard({
           {/* Status + Category */}
           <div className="flex items-center gap-2">
             <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold ${statusCfg.text}`}>
-              <span className={`h-1.5 w-1.5 rounded-full ${statusCfg.dot} ${status === "active" ? "animate-pulse" : ""}`} />
+              <span className={`h-1.5 w-1.5 rounded-full ${statusCfg.dot} ${effectiveStatus === "active" ? "animate-pulse" : ""}`} />
               {statusCfg.label}
             </span>
             {category && (
