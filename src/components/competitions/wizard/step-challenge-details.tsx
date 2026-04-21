@@ -76,7 +76,7 @@ export function StepChallengeDetails() {
     e.target.value = "";
   };
 
-  const isUploadedFile = (url: string) => url.startsWith("/uploads/");
+  const isUploadedFile = (url: string) => url.includes(".blob.vercel-storage.com/") || url.startsWith("/uploads/");
 
   return (
     <Card>

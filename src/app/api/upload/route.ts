@@ -1,9 +1,8 @@
 // TODO: Add rate limiting (@upstash/ratelimit) — currently unprotected
 import { serverAuth } from "@/lib/auth/server-auth";
 import { NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 import crypto from "crypto";
+import { put } from "@vercel/blob";
 import { apiError } from "@/lib/api-error";
 
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
@@ -65,21 +64,18 @@ export async function POST(req: Request) {
       );
     }
 
-    // Generate unique filename
-    const ext = file.name.split(".").pop() || "png";
-    const uniqueName = `${crypto.randomBytes(8).toString("hex")}-${Date.now()}.${ext}`;
+    // Generate unique filename with subfolder by kind
+    const ext = file.name.split(".").pop() || "bin";
+    const kind = isImage ? "images" : "documents";
+    const uniqueName = `${kind}/${crypto.randomBytes(8).toString("hex")}-${Date.now()}.${ext}`;
 
-    // TODO: migrate to Azure Blob Storage
-    const uploadsDir = path.join("/tmp", "uploads");
-    await mkdir(uploadsDir, { recursive: true });
+    // Upload to Vercel Blob (persistent, CDN-backed storage)
+    const blob = await put(uniqueName, file, {
+      access: "public",
+      contentType: file.type,
+    });
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const filePath = path.join(uploadsDir, uniqueName);
-    await writeFile(filePath, buffer);
-
-    const url = `/uploads/${uniqueName}`;
-
-    return NextResponse.json({ url });
+    return NextResponse.json({ url: blob.url });
   } catch (error) {
     console.error("POST /api/upload error:", error);
     return apiError(error, "Failed to upload file");
