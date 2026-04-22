@@ -197,11 +197,13 @@ export async function PATCH(
 
   // Handle "deadline-only" edit for live competitions: allow extending dates
   // without taking the competition offline. Only specific date fields editable.
+  const bodyKeys = Object.keys(rawBody);
   const isDeadlineOnlyEdit =
+    bodyKeys.length > 0 &&
     (competition.status === "active" ||
       competition.status === "approved" ||
       competition.status === "judging") &&
-    Object.keys(rawBody).every((k) =>
+    bodyKeys.every((k) =>
       ["registrationEnd", "submissionEnd", "judgingEnd", "resultsDate"].includes(k)
     );
 
