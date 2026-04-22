@@ -19,6 +19,7 @@ import type { CompetitionSponsorInput } from "@/lib/validators/competition";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { utcIsoToPktLocal } from "@/lib/utils/timezone";
 
 const STEP_COMPONENTS: Record<(typeof WIZARD_STEPS)[number], React.ComponentType> = {
   "basic-info": StepBasicInfo,
@@ -33,13 +34,10 @@ const STEP_COMPONENTS: Record<(typeof WIZARD_STEPS)[number], React.ComponentType
   review: StepReview,
 };
 
+// Convert a UTC ISO timestamp from the API into a datetime-local value
+// displayed in Pakistan Time (PKT). All dates in the wizard are PKT wall-clock.
 function toLocalISO(d: string | null | undefined): string {
-  if (!d) return "";
-  const dt = new Date(d);
-  if (isNaN(dt.getTime())) return "";
-  const offset = dt.getTimezoneOffset();
-  const local = new Date(dt.getTime() - offset * 60000);
-  return local.toISOString().slice(0, 16);
+  return utcIsoToPktLocal(d);
 }
 
 export default function NewCompetitionPage() {

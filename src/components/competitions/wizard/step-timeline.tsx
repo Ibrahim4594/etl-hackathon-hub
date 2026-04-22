@@ -99,6 +99,13 @@ export function StepTimeline() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-8">
+          <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
+            <Clock className="size-4 text-primary shrink-0" />
+            <p className="text-xs text-foreground">
+              All times are in <strong>Pakistan Time (PKT, UTC+5)</strong>.
+            </p>
+          </div>
+
           {/* Registration Phase */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCompetitionForm } from "@/hooks/use-competition-form";
+import { pktLocalToUtcIso } from "@/lib/utils/timezone";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -99,10 +100,19 @@ export function StepReview() {
         (f) => f.label.trim()
       );
 
+      // Convert PKT-local datetime-local strings into UTC ISO for storage.
+      // Organizers enter times as Pakistan wall-clock; the server stores UTC.
       const payload = {
         ...formData,
         customSubmissionFields: cleanedCustomFields,
         totalPrizePool,
+        registrationStart: pktLocalToUtcIso(formData.registrationStart) ?? formData.registrationStart,
+        registrationEnd: pktLocalToUtcIso(formData.registrationEnd) ?? formData.registrationEnd,
+        submissionStart: pktLocalToUtcIso(formData.submissionStart) ?? formData.submissionStart,
+        submissionEnd: pktLocalToUtcIso(formData.submissionEnd) ?? formData.submissionEnd,
+        judgingStart: pktLocalToUtcIso(formData.judgingStart) ?? formData.judgingStart,
+        judgingEnd: pktLocalToUtcIso(formData.judgingEnd) ?? formData.judgingEnd,
+        resultsDate: pktLocalToUtcIso(formData.resultsDate) ?? formData.resultsDate,
       };
 
       const url = editId ? `/api/competitions/${editId}` : "/api/competitions";
