@@ -48,7 +48,7 @@ export default function SponsorOnboardingPage() {
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Failed to save profile");
       toast.success("Organization created! Welcome to Competition Spark.");
-      window.location.href = "/sponsor/dashboard";
+      window.location.href = "/organizer/dashboard";
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setIsSubmitting(false);

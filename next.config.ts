@@ -6,7 +6,14 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "img.clerk.com" },
       { protocol: "https", hostname: "images.clerk.dev" },
+      { protocol: "https", hostname: "*.blob.vercel-storage.com" },
     ],
+  },
+  async rewrites() {
+    return [
+      // Allow /organizer/* URLs to serve /sponsor/* pages (URL bar shows /organizer/)
+      { source: "/organizer/:path*", destination: "/sponsor/:path*" },
+    ];
   },
   async headers() {
     return [

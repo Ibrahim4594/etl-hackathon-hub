@@ -13,6 +13,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 const SEGMENT_LABELS: Record<string, string> = {
   sponsor: "Organizer",
+  organizer: "Organizer",
 };
 
 function formatSegment(seg: string): string {

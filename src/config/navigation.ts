@@ -29,11 +29,11 @@ export const studentNav: NavItem[] = [
 ];
 
 export const sponsorNav: NavItem[] = [
-  { title: "Dashboard", href: "/sponsor/dashboard", icon: LayoutDashboard },
-  { title: "Hackathon Management", href: "/sponsor/competitions", icon: Trophy },
-  { title: "Create New", href: "/sponsor/competitions/new", icon: Plus },
-  { title: "Analytics", href: "/sponsor/analytics", icon: BarChart3 },
-  { title: "Organization", href: "/sponsor/organization", icon: Building2 },
+  { title: "Dashboard", href: "/organizer/dashboard", icon: LayoutDashboard },
+  { title: "Hackathon Management", href: "/organizer/competitions", icon: Trophy },
+  { title: "Create New", href: "/organizer/competitions/new", icon: Plus },
+  { title: "Analytics", href: "/organizer/analytics", icon: BarChart3 },
+  { title: "Organization", href: "/organizer/organization", icon: Building2 },
 ];
 
 export const judgeNav: NavItem[] = [

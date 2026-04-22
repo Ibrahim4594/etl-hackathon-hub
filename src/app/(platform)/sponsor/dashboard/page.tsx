@@ -283,11 +283,8 @@ export default async function SponsorDashboardPage() {
 
             <div>
               <div className="flex items-center gap-2.5">
-                <h1 className="text-2xl font-bold md:text-3xl">
-                  Welcome back,{" "}
-                  <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                    {orgName}
-                  </span>
+                <h1 className="text-2xl font-bold md:text-3xl text-foreground">
+                  Welcome back, {orgName}
                 </h1>
                 <span
                   className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${verificationBadge.cls}`}

@@ -16,7 +16,7 @@ const isOnboardingRoute = createRouteMatcher(["/onboarding(.*)"]);
 const isOnboardingApiRoute = createRouteMatcher(["/api/onboarding(.*)"]);
 
 const isStudentRoute = createRouteMatcher(["/student(.*)"]);
-const isSponsorRoute = createRouteMatcher(["/sponsor(.*)"]);
+const isSponsorRoute = createRouteMatcher(["/sponsor(.*)", "/organizer(.*)"]);
 const isJudgeRoute = createRouteMatcher(["/judge(.*)"]);
 const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
 
@@ -78,23 +78,26 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.next();
   }
 
+  // Map internal role → public URL segment (sponsor is exposed as "organizer")
+  const roleSegment = role === "sponsor" ? "organizer" : role;
+
   // If onboarding complete but on onboarding page, redirect to dashboard
   if (isOnboardingRoute(req)) {
-    return NextResponse.redirect(new URL(`/${role}/dashboard`, req.url));
+    return NextResponse.redirect(new URL(`/${roleSegment}/dashboard`, req.url));
   }
 
   // Role-based route protection
   if (isStudentRoute(req) && role !== "student" && role !== "admin") {
-    return NextResponse.redirect(new URL(`/${role}/dashboard`, req.url));
+    return NextResponse.redirect(new URL(`/${roleSegment}/dashboard`, req.url));
   }
   if (isSponsorRoute(req) && role !== "sponsor" && role !== "admin") {
-    return NextResponse.redirect(new URL(`/${role}/dashboard`, req.url));
+    return NextResponse.redirect(new URL(`/${roleSegment}/dashboard`, req.url));
   }
   if (isJudgeRoute(req) && role !== "judge" && role !== "admin") {
-    return NextResponse.redirect(new URL(`/${role}/dashboard`, req.url));
+    return NextResponse.redirect(new URL(`/${roleSegment}/dashboard`, req.url));
   }
   if (isAdminRoute(req) && role !== "admin") {
-    return NextResponse.redirect(new URL(`/${role}/dashboard`, req.url));
+    return NextResponse.redirect(new URL(`/${roleSegment}/dashboard`, req.url));
   }
 
   return NextResponse.next();

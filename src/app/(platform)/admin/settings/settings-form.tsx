@@ -7,14 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
   Settings,
-  Scale,
-  Trophy,
-  Users,
   Globe,
   Save,
   Loader2,
   RotateCcw,
-  CheckCircle,
   AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -144,120 +140,15 @@ export function SettingsForm() {
         </div>
       )}
 
+      <div className="rounded-lg border border-border/50 bg-muted/30 p-4">
+        <p className="text-xs text-muted-foreground">
+          Judging weights, team sizes, and other competition-specific settings
+          are configured per-competition by organizers in the competition wizard.
+          This page only controls platform-wide information.
+        </p>
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Judging Defaults */}
-        <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Scale className="h-4 w-4 text-primary" />
-              Judging Defaults
-            </CardTitle>
-            <CardDescription>
-              Default scoring weights applied when organizers create new competitions
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label>AI Judge Weight (%)</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={settings["judging.ai_weight"]}
-                  onChange={(e) => update("judging.ai_weight", e.target.value)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Human Judge Weight (%)</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={settings["judging.human_weight"]}
-                  onChange={(e) => update("judging.human_weight", e.target.value)}
-                />
-              </div>
-            </div>
-            {/* Weight visualization */}
-            <div className="rounded-lg bg-muted/50 p-3">
-              <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1.5">
-                <span>AI: {settings["judging.ai_weight"]}%</span>
-                <span>Human: {settings["judging.human_weight"]}%</span>
-              </div>
-              <div className="h-2.5 bg-muted rounded-full overflow-hidden flex">
-                <div
-                  className="h-full bg-primary/60 transition-all"
-                  style={{ width: `${settings["judging.ai_weight"]}%` }}
-                />
-                <div
-                  className="h-full bg-primary transition-all"
-                  style={{ width: `${settings["judging.human_weight"]}%` }}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>Default Finalist Count</Label>
-              <Input
-                type="number"
-                min={1}
-                max={100}
-                value={settings["judging.finalist_count"]}
-                onChange={(e) => update("judging.finalist_count", e.target.value)}
-              />
-              <p className="text-[11px] text-muted-foreground">Number of top submissions marked as finalists by default</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Competition Defaults */}
-        <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Trophy className="h-4 w-4 text-primary" />
-              Competition Defaults
-            </CardTitle>
-            <CardDescription>
-              Default values for new competitions
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label>Min Team Size</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={10}
-                  value={settings["competition.min_team_size"]}
-                  onChange={(e) => update("competition.min_team_size", e.target.value)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Max Team Size</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={10}
-                  value={settings["competition.max_team_size"]}
-                  onChange={(e) => update("competition.max_team_size", e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Max Screenshots per Submission</Label>
-              <Input
-                type="number"
-                min={0}
-                max={20}
-                value={settings["competition.max_screenshots"]}
-                onChange={(e) => update("competition.max_screenshots", e.target.value)}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Platform Info */}
         <Card>
           <CardHeader className="pb-4">
@@ -288,58 +179,6 @@ export function SettingsForm() {
           </CardContent>
         </Card>
 
-        {/* Maintenance Mode */}
-        <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <AlertTriangle className="h-4 w-4 text-primary" />
-              Maintenance Mode
-            </CardTitle>
-            <CardDescription>
-              When enabled, only admins can access the platform
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <button
-              type="button"
-              onClick={() =>
-                update(
-                  "platform.maintenance_mode",
-                  settings["platform.maintenance_mode"] === "true" ? "false" : "true"
-                )
-              }
-              className={`
-                flex items-center gap-3 w-full rounded-xl border p-4 text-left transition-all
-                ${settings["platform.maintenance_mode"] === "true"
-                  ? "border-red-500/30 bg-red-500/5"
-                  : "border-emerald-500/30 bg-emerald-500/5"
-                }
-              `}
-            >
-              {settings["platform.maintenance_mode"] === "true" ? (
-                <>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/10">
-                    <AlertTriangle className="h-5 w-5 text-red-500" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-red-600 dark:text-red-400">Maintenance Mode ON</p>
-                    <p className="text-[12px] text-muted-foreground">Platform is restricted to admins only</p>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10">
-                    <CheckCircle className="h-5 w-5 text-emerald-500" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">Platform is Live</p>
-                    <p className="text-[12px] text-muted-foreground">All users can access the platform</p>
-                  </div>
-                </>
-              )}
-            </button>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
