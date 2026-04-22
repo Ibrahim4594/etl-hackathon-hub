@@ -6,14 +6,30 @@ import { NextResponse } from "next/server";
 import { apiError } from "@/lib/api-error";
 import { z } from "zod/v4";
 
+// Accept empty string OR a valid URL (empty means "not set")
+const urlOrEmpty = z
+  .string()
+  .transform((v) => (v === "" ? null : v))
+  .pipe(z.string().url().nullable())
+  .optional()
+  .nullable();
+
+// Accept empty string OR a valid email (empty means "not set")
+const emailOrEmpty = z
+  .string()
+  .transform((v) => (v === "" ? null : v))
+  .pipe(z.string().email().nullable())
+  .optional()
+  .nullable();
+
 const competitionUpdateSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   tagline: z.string().max(300).optional(),
   description: z.string().optional(),
   category: z.string().optional(),
   tags: z.array(z.string().max(30)).max(10).optional(),
-  coverImageUrl: z.string().url().optional().nullable(),
-  logoUrl: z.string().url().optional().nullable(),
+  coverImageUrl: urlOrEmpty,
+  logoUrl: urlOrEmpty,
   challengeStatement: z.string().optional(),
   requirements: z.any().optional(),
   resources: z.any().optional(),
@@ -38,14 +54,14 @@ const competitionUpdateSchema = z.object({
   submissionRequirements: z.any().optional(),
   sponsors: z.array(z.object({
     companyName: z.string().min(1),
-    logoUrl: z.string().url().optional().nullable(),
-    website: z.string().url().optional().nullable(),
+    logoUrl: urlOrEmpty,
+    website: urlOrEmpty,
     contributionType: z.string().optional(),
     contributionTitle: z.string().optional(),
     contributionDescription: z.string().optional().nullable(),
     contributionAmount: z.number().optional().nullable(),
     contactPersonName: z.string().optional().nullable(),
-    contactPersonEmail: z.string().email().optional().nullable(),
+    contactPersonEmail: emailOrEmpty,
     contactPersonPhone: z.string().optional().nullable(),
     sponsorTier: z.string().optional(),
     featured: z.boolean().optional(),
