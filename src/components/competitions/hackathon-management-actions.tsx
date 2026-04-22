@@ -32,6 +32,7 @@ export function HackathonManagementActions({
   const canEdit = status === "pending_review" || status === "cancelled" || status === "draft";
   const canDelete = status === "pending_review" || status === "cancelled" || status === "draft";
   const canUnpublish = status === "active" || status === "approved";
+  const [unpublishOpen, setUnpublishOpen] = useState(false);
 
   async function handleDelete() {
     setLoading("delete");
@@ -66,6 +67,7 @@ export function HackathonManagementActions({
         return;
       }
       toast.success("Hackathon unpublished and sent back for review");
+      setUnpublishOpen(false);
       router.refresh();
     } finally {
       setLoading(null);
@@ -92,7 +94,7 @@ export function HackathonManagementActions({
         <Button
           size="sm"
           variant="outline"
-          onClick={handleUnpublish}
+          onClick={() => setUnpublishOpen(true)}
           disabled={loading === "unpublish"}
         >
           {loading === "unpublish" ? (
@@ -113,6 +115,33 @@ export function HackathonManagementActions({
           Delete
         </Button>
       )}
+
+      <Dialog open={unpublishOpen} onOpenChange={setUnpublishOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Unpublish Competition?</DialogTitle>
+            <DialogDescription>
+              This will take the competition offline and send it back for review.
+              <strong className="block mt-2 text-foreground">What happens next:</strong>
+              <ul className="mt-1 list-disc list-inside text-xs space-y-0.5">
+                <li>Students will no longer see or register for this competition</li>
+                <li>Judges will lose access to their assigned submissions</li>
+                <li>The public marketplace listing will be hidden</li>
+                <li>You&apos;ll need to re-publish (Go Live) after admin approval</li>
+              </ul>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setUnpublishOpen(false)} disabled={loading === "unpublish"}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleUnpublish} disabled={loading === "unpublish"}>
+              {loading === "unpublish" ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <EyeOff className="mr-1.5 h-4 w-4" />}
+              Unpublish Anyway
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent>

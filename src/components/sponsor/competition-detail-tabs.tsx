@@ -13,6 +13,7 @@ import { GoLiveButton } from "@/components/competitions/go-live-button";
 import { AnnounceWinnersDialog } from "@/components/competitions/announce-winners-dialog";
 import { AutoAssignButton } from "@/components/competitions/auto-assign-button";
 import { AssignSubmissionDialog } from "@/components/submissions/assign-submission-dialog";
+import { ExtendDeadlinesDialog } from "@/components/competitions/extend-deadlines-dialog";
 import {
   Edit,
   Trophy,
@@ -245,6 +246,15 @@ export function CompetitionDetailTabs({
               )}
               {(c.status === "approved" || c.status === "active" || c.status === "judging") && (
                 <InviteJudgeDialog competitionId={c.id} />
+              )}
+              {(c.status === "approved" || c.status === "active" || c.status === "judging") && (
+                <ExtendDeadlinesDialog
+                  competitionId={c.id}
+                  registrationEnd={c.registrationEnd}
+                  submissionEnd={c.submissionEnd}
+                  judgingEnd={c.judgingEnd}
+                  resultsDate={c.resultsDate}
+                />
               )}
               {c.slug && (
                 <Link href={`/competitions/${c.slug}`} target="_blank">

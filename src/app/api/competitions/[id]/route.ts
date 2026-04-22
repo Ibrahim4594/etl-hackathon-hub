@@ -195,9 +195,38 @@ export async function PATCH(
     return NextResponse.json({ competition: updated });
   }
 
+  // Handle "deadline-only" edit for live competitions: allow extending dates
+  // without taking the competition offline. Only specific date fields editable.
+  const isDeadlineOnlyEdit =
+    (competition.status === "active" ||
+      competition.status === "approved" ||
+      competition.status === "judging") &&
+    Object.keys(rawBody).every((k) =>
+      ["registrationEnd", "submissionEnd", "judgingEnd", "resultsDate"].includes(k)
+    );
+
+  if (isDeadlineOnlyEdit) {
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
+    for (const k of ["registrationEnd", "submissionEnd", "judgingEnd", "resultsDate"] as const) {
+      if (rawBody[k]) {
+        const d = new Date(rawBody[k]);
+        if (isNaN(d.getTime())) {
+          return NextResponse.json({ error: `Invalid ${k}` }, { status: 400 });
+        }
+        updates[k] = d;
+      }
+    }
+    const [updated] = await db
+      .update(competitions)
+      .set(updates)
+      .where(eq(competitions.id, id))
+      .returning();
+    return NextResponse.json({ competition: updated });
+  }
+
   if (competition.status !== "pending_review" && competition.status !== "draft" && competition.status !== "cancelled") {
     return NextResponse.json(
-      { error: "Only pending review or rejected competitions can be edited" },
+      { error: "Only pending review or rejected competitions can be fully edited. To change deadlines on a live competition, use the Extend Deadlines action." },
       { status: 400 }
     );
   }
