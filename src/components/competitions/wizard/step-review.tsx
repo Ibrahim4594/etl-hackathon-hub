@@ -94,8 +94,14 @@ export function StepReview() {
     setSubmitError(null);
 
     try {
+      // Strip empty custom submission fields (user added rows but left labels blank)
+      const cleanedCustomFields = (formData.customSubmissionFields ?? []).filter(
+        (f) => f.label.trim()
+      );
+
       const payload = {
         ...formData,
+        customSubmissionFields: cleanedCustomFields,
         totalPrizePool,
       };
 
@@ -148,7 +154,7 @@ export function StepReview() {
           </p>
           <Button
             className="mt-6"
-            onClick={() => router.push("/sponsor/competitions")}
+            onClick={() => router.push("/organizer/competitions")}
           >
             Go to Hackathon Management
           </Button>
@@ -360,37 +366,41 @@ export function StepReview() {
             </div>
           </div>
 
-          {/* Custom Submission Fields */}
-          {formData.customSubmissionFields && formData.customSubmissionFields.filter(f => f.label.trim()).length > 0 && (
-            <>
-              <Separator />
-              <div>
-                <SectionHeader icon={GripVertical} title="Custom Submission Fields" />
-                <div className="rounded-lg border p-3 space-y-0.5">
-                  <Field
-                    label="Count"
-                    value={`${formData.customSubmissionFields.length} field(s)`}
-                  />
-                  {formData.customSubmissionFields.map((f, i) => (
+          {/* Custom Submission Fields — only show fields with a label */}
+          {(() => {
+            const validFields = (formData.customSubmissionFields ?? []).filter(f => f.label.trim());
+            if (validFields.length === 0) return null;
+            return (
+              <>
+                <Separator />
+                <div>
+                  <SectionHeader icon={GripVertical} title="Custom Submission Fields" />
+                  <div className="rounded-lg border p-3 space-y-0.5">
                     <Field
-                      key={f.id}
-                      label={f.label || `Field ${i + 1}`}
-                      value={
-                        <div className="flex items-center gap-1.5">
-                          <Badge variant="secondary" className="text-[10px]">{f.type}</Badge>
-                          {f.required && (
-                            <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-[10px]">
-                              Required
-                            </Badge>
-                          )}
-                        </div>
-                      }
+                      label="Count"
+                      value={`${validFields.length} field${validFields.length !== 1 ? "s" : ""}`}
                     />
-                  ))}
+                    {validFields.map((f) => (
+                      <Field
+                        key={f.id}
+                        label={f.label}
+                        value={
+                          <div className="flex items-center gap-1.5">
+                            <Badge variant="secondary" className="text-[10px]">{f.type}</Badge>
+                            {f.required && (
+                              <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-[10px]">
+                                Required
+                              </Badge>
+                            )}
+                          </div>
+                        }
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </>
-          )}
+              </>
+            );
+          })()}
 
           <Separator />
 

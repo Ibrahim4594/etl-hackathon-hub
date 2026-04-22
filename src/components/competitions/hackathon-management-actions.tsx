@@ -29,6 +29,7 @@ export function HackathonManagementActions({
   const [loading, setLoading] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
+  const canEdit = status === "pending_review" || status === "cancelled" || status === "draft";
   const canDelete = status === "pending_review" || status === "cancelled" || status === "draft";
   const canUnpublish = status === "active" || status === "approved";
 
@@ -79,12 +80,14 @@ export function HackathonManagementActions({
           View
         </Button>
       </Link>
-      <Link href={`/sponsor/competitions/new?edit=${competitionId}`}>
-        <Button size="sm" variant="outline">
-          <Pencil className="mr-1.5 h-3.5 w-3.5" />
-          Edit
-        </Button>
-      </Link>
+      {canEdit && (
+        <Link href={`/organizer/competitions/new?edit=${competitionId}`}>
+          <Button size="sm" variant="outline">
+            <Pencil className="mr-1.5 h-3.5 w-3.5" />
+            Edit
+          </Button>
+        </Link>
+      )}
       {canUnpublish && (
         <Button
           size="sm"

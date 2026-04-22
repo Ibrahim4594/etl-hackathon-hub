@@ -111,7 +111,7 @@ export default function JudgeOnboardingPage() {
 
             <div className="space-y-1.5">
               <Label htmlFor="yearsOfExperience">Years of Experience</Label>
-              <Select onValueChange={(val: string | null) => val && setValue("yearsOfExperience", val)}>
+              <Select onValueChange={(val: string | null) => val && setValue("yearsOfExperience", val, { shouldValidate: true })}>
                 <SelectTrigger className="rounded-xl h-10">
                   <SelectValue placeholder="Select experience level" />
                 </SelectTrigger>

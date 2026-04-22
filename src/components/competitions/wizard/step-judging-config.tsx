@@ -12,7 +12,7 @@ import { Scale, Plus, Trash2, Bot, UserCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function StepJudgingConfig() {
-  const { formData, updateFormData, stepErrors, validateStep } = useCompetitionForm();
+  const { formData, updateFormData, stepErrors, revalidateIfAttempted } = useCompetitionForm();
 
   const redistributeWeights = (criteria: typeof formData.judgingCriteria) => {
     if (criteria.length === 0) return criteria;
@@ -179,7 +179,7 @@ export function StepJudgingConfig() {
                 const raw = parseInt(e.target.value);
                 if (!isNaN(raw)) updateFormData({ finalistCount: raw });
               }}
-              onBlur={() => { updateFormData({ finalistCount: Math.max(1, formData.finalistCount || 10) }); validateStep(); }}
+              onBlur={() => { updateFormData({ finalistCount: Math.max(1, formData.finalistCount || 10) }); revalidateIfAttempted(); }}
             />
             <p className="text-xs text-muted-foreground">
               How many top submissions advance to the finalist round for human judging.

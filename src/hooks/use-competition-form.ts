@@ -77,18 +77,38 @@ interface CompetitionFormState {
   currentStep: number;
   formData: CompetitionCreateInput;
   stepErrors: Record<string, string>;
+  hasAttemptedNext: boolean;
   setStep: (step: number) => void;
   updateFormData: (data: Partial<CompetitionCreateInput>) => void;
   validateStep: () => boolean;
+  revalidateIfAttempted: () => void;
   reset: () => void;
+}
+
+function runStepValidation(
+  currentStep: number,
+  formData: CompetitionCreateInput
+): { ok: true } | { ok: false; errors: Record<string, string> } {
+  const stepName = WIZARD_STEPS[currentStep];
+  const schema = stepSchemas[stepName];
+  if (!schema) return { ok: true };
+  const result = schema.safeParse(formData);
+  if (result.success) return { ok: true };
+  const errors: Record<string, string> = {};
+  for (const issue of result.error.issues) {
+    const key = issue.path.length > 0 ? String(issue.path.join(".")) : "_form";
+    if (!errors[key]) errors[key] = issue.message;
+  }
+  return { ok: false, errors };
 }
 
 export const useCompetitionForm = create<CompetitionFormState>((set, get) => ({
   currentStep: 0,
   formData: { ...initialFormData },
   stepErrors: {},
+  hasAttemptedNext: false,
   setStep: (step) =>
-    set({ currentStep: Math.max(0, Math.min(step, WIZARD_STEPS.length - 1)), stepErrors: {} }),
+    set({ currentStep: Math.max(0, Math.min(step, WIZARD_STEPS.length - 1)), stepErrors: {}, hasAttemptedNext: false }),
   updateFormData: (data) =>
     set((state) => {
       const updatedErrors = { ...state.stepErrors };
@@ -102,24 +122,25 @@ export const useCompetitionForm = create<CompetitionFormState>((set, get) => ({
     }),
   validateStep: () => {
     const { currentStep, formData } = get();
-    const stepName = WIZARD_STEPS[currentStep];
-    const schema = stepSchemas[stepName];
-    if (!schema) {
-      set({ stepErrors: {} });
+    const result = runStepValidation(currentStep, formData);
+    if (result.ok) {
+      set({ stepErrors: {}, hasAttemptedNext: true });
       return true;
     }
-    const result = schema.safeParse(formData);
-    if (result.success) {
-      set({ stepErrors: {} });
-      return true;
-    }
-    const errors: Record<string, string> = {};
-    for (const issue of result.error.issues) {
-      const key = issue.path.length > 0 ? String(issue.path.join(".")) : "_form";
-      if (!errors[key]) errors[key] = issue.message;
-    }
-    set({ stepErrors: errors });
+    set({ stepErrors: result.errors, hasAttemptedNext: true });
     return false;
   },
-  reset: () => set({ currentStep: 0, formData: { ...initialFormData }, stepErrors: {} }),
+  // Runs validation silently — only surfaces errors if user has already attempted Next.
+  // Used by onBlur handlers so we don't nag users about fields they haven't tried yet.
+  revalidateIfAttempted: () => {
+    const { currentStep, formData, hasAttemptedNext } = get();
+    if (!hasAttemptedNext) return;
+    const result = runStepValidation(currentStep, formData);
+    if (result.ok) {
+      set({ stepErrors: {} });
+    } else {
+      set({ stepErrors: result.errors });
+    }
+  },
+  reset: () => set({ currentStep: 0, formData: { ...initialFormData }, stepErrors: {}, hasAttemptedNext: false }),
 }));
