@@ -51,6 +51,7 @@ export function AssignJudgeDialog({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: judgeEmail,
+          name: judgeName,
           competitionId: selectedCompetition,
         }),
       });
@@ -101,7 +102,11 @@ export function AssignJudgeDialog({
             onValueChange={(val) => setSelectedCompetition(val ?? "")}
           >
             <SelectTrigger className="w-full h-10 rounded-xl bg-background/50">
-              <SelectValue placeholder="Select a competition" />
+              <SelectValue placeholder="Select a competition">
+                {selectedCompetition
+                  ? competitions.find((c) => c.id === selectedCompetition)?.title ?? "Select a competition"
+                  : "Select a competition"}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {competitions.length === 0 ? (

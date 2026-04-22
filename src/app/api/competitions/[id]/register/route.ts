@@ -41,8 +41,16 @@ export async function POST(
       return NextResponse.json({ error: "Competition not found" }, { status: 404 });
     }
 
-    if (competition.status !== "active") {
-      return NextResponse.json({ error: "Competition is not accepting registrations" }, { status: 400 });
+    // Allow registrations for active comps, or approved comps whose registration window has opened
+    const now = new Date();
+    const regStart = competition.registrationStart ? new Date(competition.registrationStart) : null;
+    const regEnd = competition.registrationEnd ? new Date(competition.registrationEnd) : null;
+
+    const isActive = competition.status === "active";
+    const isApprovedAndOpen = competition.status === "approved" && regStart !== null && now >= regStart;
+
+    if (!isActive && !isApprovedAndOpen) {
+      return NextResponse.json({ error: "Competition is not accepting registrations yet" }, { status: 400 });
     }
 
     // Access code validation for private competitions
@@ -54,10 +62,10 @@ export async function POST(
     }
 
     // Check registration window
-    if (competition.registrationStart && new Date() < new Date(competition.registrationStart)) {
+    if (regStart && now < regStart) {
       return NextResponse.json({ error: "Registration has not opened yet" }, { status: 400 });
     }
-    if (competition.registrationEnd && new Date(competition.registrationEnd) < new Date()) {
+    if (regEnd && regEnd < now) {
       return NextResponse.json({ error: "Registration deadline has passed" }, { status: 400 });
     }
 

@@ -255,20 +255,24 @@ export default async function CompetitionDetailPage({ params }: Props) {
         </div>
       </nav>
 
+      {/* ── Visible Cover Banner ── */}
+      {comp.coverImageUrl && (
+        <div className="relative h-48 w-full overflow-hidden sm:h-64 md:h-80">
+          <Image
+            src={comp.coverImageUrl}
+            alt={comp.title}
+            fill
+            priority
+            className="object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent" />
+        </div>
+      )}
+
       {/* ── Hero Banner ── */}
       <section className="relative overflow-hidden border-b border-border">
-        {/* Background */}
-        {comp.coverImageUrl ? (
-          <div className="absolute inset-0">
-            <Image
-              src={comp.coverImageUrl}
-              alt={comp.title}
-              fill
-              className="object-cover opacity-20 blur-sm"
-            />
-            <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/80 to-background" />
-          </div>
-        ) : (
+        {/* Background (fallback gradient only when no cover image) */}
+        {!comp.coverImageUrl && (
           <div className={`absolute inset-0 bg-gradient-to-br ${getCategoryGradient(comp.category)} opacity-10`} />
         )}
 

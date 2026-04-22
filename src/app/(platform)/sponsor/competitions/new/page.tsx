@@ -132,6 +132,14 @@ export default function NewCompetitionPage() {
           finalistCount: Number(competition.finalistCount ?? 10),
           submissionRequirements:
             (competition.submissionRequirements as never) ?? undefined,
+          customSubmissionFields:
+            (competition.customSubmissionFields as never[]) ?? [],
+          visibility:
+            (competition.visibility as "public" | "private") ?? "public",
+          accessCode: String(competition.accessCode ?? ""),
+          prizeConfirmed: Boolean(competition.prizeConfirmed ?? false),
+          targetParticipants:
+            (competition.targetParticipants as never[]) ?? ["all"],
           sponsors,
         });
       })
