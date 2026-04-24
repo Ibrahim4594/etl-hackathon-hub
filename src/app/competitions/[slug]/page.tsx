@@ -929,6 +929,7 @@ export default async function CompetitionDetailPage({ params }: Props) {
               <RegistrationStatus
                 competitionId={comp.id}
                 competitionStatus={comp.status}
+                visibility={comp.visibility}
                 registrationStart={comp.registrationStart?.toISOString() ?? null}
                 registrationEnd={comp.registrationEnd?.toISOString() ?? null}
                 submissionEnd={comp.submissionEnd?.toISOString() ?? null}
