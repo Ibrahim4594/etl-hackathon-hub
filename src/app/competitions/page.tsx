@@ -148,7 +148,7 @@ export default async function CompetitionsMarketplace({
   }
 
   return (
-    <div className="min-h-screen pt-10">
+    <div className="min-h-screen">
       {/* ── Hero Banner ── */}
       <section className="relative overflow-hidden border-b border-border bg-gradient-to-br from-primary/5 via-background to-accent/5">
         {/* Decorative orbs */}

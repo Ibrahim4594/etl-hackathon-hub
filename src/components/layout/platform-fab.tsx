@@ -8,7 +8,7 @@ export function PlatformFab() {
   const pathname = usePathname();
 
   // Hide FAB on wizard page to avoid overlapping with wizard navigation buttons
-  if (pathname.startsWith("/sponsor/competitions/new")) return null;
+  if (pathname.startsWith("/organizer/competitions/new")) return null;
 
   // Determine options based on current route section
   const section = pathname.split("/")[1]; // student, sponsor, judge, admin
@@ -23,7 +23,7 @@ export function PlatformFab() {
     },
   ];
 
-  if (section === "sponsor") {
+  if (section === "organizer") {
     return (
       <FloatingActionMenu
         options={[
@@ -31,14 +31,14 @@ export function PlatformFab() {
             label: "New Competition",
             Icon: <Plus className="w-4 h-4" />,
             onClick: () => {
-              window.location.href = "/sponsor/competitions/new";
+              window.location.href = "/organizer/competitions/new";
             },
           },
           {
             label: "My Competitions",
             Icon: <Trophy className="w-4 h-4" />,
             onClick: () => {
-              window.location.href = "/sponsor/competitions";
+              window.location.href = "/organizer/competitions";
             },
           },
           ...baseOptions,

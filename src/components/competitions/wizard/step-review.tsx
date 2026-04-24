@@ -128,18 +128,15 @@ export function StepReview() {
         const data = await response.json().catch(() => ({}));
         // Show field-level validation errors if available
         if (data.issues && Array.isArray(data.issues)) {
-          const fieldErrors = data.issues
-            .map((issue: { path?: (string | number)[]; message?: string }) =>
-              `${issue.path?.join(".") || "unknown"}: ${issue.message || "invalid"}`
-            )
-            .join("\n");
-          throw new Error(`Validation failed:\n${fieldErrors}`);
+          const messages = (data.issues as { message?: string }[])
+            .map((issue) => issue.message || "Invalid value")
+            .filter(Boolean);
+          throw new Error(messages.join(". "));
         }
         throw new Error(data.error || `Request failed with status ${response.status}`);
       }
 
       setSubmitSuccess(true);
-      if (!editId) reset();
     } catch (err) {
       setSubmitError(
         err instanceof Error ? err.message : "Something went wrong"
@@ -164,7 +161,7 @@ export function StepReview() {
           </p>
           <Button
             className="mt-6"
-            onClick={() => router.push("/organizer/competitions")}
+            onClick={() => { reset(); router.push("/organizer/competitions"); }}
           >
             Go to Hackathon Management
           </Button>

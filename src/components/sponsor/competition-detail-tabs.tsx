@@ -225,7 +225,7 @@ export function CompetitionDetailTabs({
               {(isEditable || c.status === "pending_review") && (
                 <>
                   {isEditable && (
-                    <Link href={`/sponsor/competitions/new?edit=${c.id}`}>
+                    <Link href={`/organizer/competitions/new?edit=${c.id}`}>
                       <Button variant="outline" size="sm">
                         <Edit className="mr-1.5 h-3.5 w-3.5" />
                         Edit
@@ -349,7 +349,7 @@ export function CompetitionDetailTabs({
               <Info className="h-4 w-4 shrink-0 text-amber-500" />
               <p className="text-xs text-amber-600">
                 Competition fields can only be edited while in review.{" "}
-                <Link href={`/sponsor/competitions/new?edit=${c.id}`} className="font-medium underline">
+                <Link href={`/organizer/competitions/new?edit=${c.id}`} className="font-medium underline">
                   Edit competition
                 </Link>
               </p>
@@ -475,7 +475,7 @@ export function CompetitionDetailTabs({
           </div>
 
           {/* Timeline */}
-          <Card className={`border-border/50 shadow-sm${!isEditable ? " opacity-60 pointer-events-none" : ""}`}>
+          <Card className={`border-border/50 shadow-sm${!isEditable ? " pointer-events-none" : ""}`}>
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500/20 to-blue-500/5">
@@ -518,7 +518,7 @@ export function CompetitionDetailTabs({
           )}
 
           {/* Prizes */}
-          <Card className={`border-border/50 shadow-sm${!isEditable ? " opacity-60 pointer-events-none" : ""}`}>
+          <Card className={`border-border/50 shadow-sm${!isEditable ? " pointer-events-none" : ""}`}>
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500/20 to-amber-500/5">
@@ -557,7 +557,7 @@ export function CompetitionDetailTabs({
           </Card>
 
           {/* Sponsors */}
-          <Card className={`border-border/50 shadow-sm${!isEditable ? " opacity-60 pointer-events-none" : ""}`}>
+          <Card className={`border-border/50 shadow-sm${!isEditable ? " pointer-events-none" : ""}`}>
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500/20 to-blue-500/5">
@@ -597,7 +597,7 @@ export function CompetitionDetailTabs({
           </Card>
 
           {/* Submission Requirements */}
-          <Card className={`border-border/50 shadow-sm${!isEditable ? " opacity-60 pointer-events-none" : ""}`}>
+          <Card className={`border-border/50 shadow-sm${!isEditable ? " pointer-events-none" : ""}`}>
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500/20 to-emerald-500/5">
@@ -637,7 +637,7 @@ export function CompetitionDetailTabs({
           </Card>
 
           {/* Judging Configuration */}
-          <Card className={`border-border/50 shadow-sm${!isEditable ? " opacity-60 pointer-events-none" : ""}`}>
+          <Card className={`border-border/50 shadow-sm${!isEditable ? " pointer-events-none" : ""}`}>
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500/20 to-purple-500/5">

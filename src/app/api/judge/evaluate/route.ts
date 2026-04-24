@@ -84,6 +84,8 @@ export async function POST(req: Request) {
       }
     }
 
+    // Note: per-criterion maxScore is validated below, after criteria are fetched.
+
     // Fetch submission to get competition ID
     const [submission] = await db
       .select({
@@ -101,9 +103,13 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check judging window
+    // Check judging window and fetch criteria for composite calculation
     const [comp] = await db
-      .select({ judgingStart: competitions.judgingStart, judgingEnd: competitions.judgingEnd })
+      .select({
+        judgingStart: competitions.judgingStart,
+        judgingEnd: competitions.judgingEnd,
+        judgingCriteria: competitions.judgingCriteria,
+      })
       .from(competitions)
       .where(eq(competitions.id, submission.competitionId));
 
@@ -151,10 +157,49 @@ export async function POST(req: Request) {
       );
     }
 
-    // Compute composite score (average of all criteria scores)
-    const scoreValues = Object.values(scores) as number[];
-    const compositeScore =
-      scoreValues.reduce((sum, v) => sum + v, 0) / scoreValues.length;
+    // Validate each score against its criterion's configured maxScore.
+    // This enforces per-criterion bounds (e.g. maxScore: 50 means score must be ≤ 50).
+    const criteria = comp?.judgingCriteria ?? [];
+    if (criteria.length > 0) {
+      for (const c of criteria) {
+        const key = c.name.toLowerCase().replace(/\s+/g, "_");
+        const raw = (scores as Record<string, number>)[key];
+        if (raw !== undefined && raw > c.maxScore) {
+          return NextResponse.json(
+            { error: `Score for "${c.name}" cannot exceed its maximum of ${c.maxScore}` },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
+    // Compute composite score: weighted normalized to 0-100.
+    // Each criterion score is divided by its maxScore (normalizing to 0-1),
+    // then multiplied by its weight, then scaled to 0-100.
+    let compositeScore: number;
+
+    if (criteria.length > 0) {
+      const totalWeight = criteria.reduce((s, c) => s + c.weight, 0);
+      if (totalWeight > 0) {
+        let weighted = 0;
+        for (const c of criteria) {
+          const key = c.name.toLowerCase().replace(/\s+/g, "_");
+          const raw = (scores as Record<string, number>)[key] ?? 0;
+          weighted += (raw / c.maxScore) * c.weight;
+        }
+        compositeScore = (weighted / totalWeight) * 100;
+      } else {
+        // Zero total weight — fall back to simple average
+        const scoreValues = Object.values(scores) as number[];
+        compositeScore =
+          scoreValues.reduce((sum, v) => sum + v, 0) / scoreValues.length;
+      }
+    } else {
+      // No custom criteria — scores are already 1-100, use simple average
+      const scoreValues = Object.values(scores) as number[];
+      compositeScore =
+        scoreValues.reduce((sum, v) => sum + v, 0) / scoreValues.length;
+    }
 
     // Upsert judge evaluation
     const [existingEvaluation] = await db

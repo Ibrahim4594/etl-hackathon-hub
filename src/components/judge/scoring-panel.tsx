@@ -31,10 +31,10 @@ interface ScoringPanelProps {
 }
 
 const DEFAULT_CRITERIA: CriterionConfig[] = [
-  { name: "innovation", description: "Originality and creativity of the solution", weight: 25, maxScore: 10 },
-  { name: "technical", description: "Code quality, architecture, and complexity", weight: 25, maxScore: 10 },
-  { name: "impact", description: "Potential real-world impact and usefulness", weight: 25, maxScore: 10 },
-  { name: "design", description: "UI/UX, presentation, and user experience", weight: 25, maxScore: 10 },
+  { name: "innovation", description: "Originality and creativity of the solution", weight: 25, maxScore: 100 },
+  { name: "technical", description: "Code quality, architecture, and complexity", weight: 25, maxScore: 100 },
+  { name: "impact", description: "Potential real-world impact and usefulness", weight: 25, maxScore: 100 },
+  { name: "design", description: "UI/UX, presentation, and user experience", weight: 25, maxScore: 100 },
 ];
 
 function getScoreColor(score: number, max: number): string {
@@ -178,7 +178,10 @@ export function ScoringPanel({
 
           {/* Composite */}
           <div className="flex items-center justify-between rounded-lg bg-muted/50 p-4">
-            <span className="text-sm font-medium">Weighted Score</span>
+            <div>
+              <span className="text-sm font-medium">Weighted Score</span>
+              <p className="text-xs text-muted-foreground mt-0.5">Normalized across all criteria</p>
+            </div>
             <span className={`text-2xl font-black ${getScoreColor(compositeScore, 10)}`}>
               {compositeScore.toFixed(1)}
               <span className="text-sm text-muted-foreground font-normal">/10</span>

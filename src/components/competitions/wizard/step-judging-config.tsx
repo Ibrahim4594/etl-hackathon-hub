@@ -25,7 +25,7 @@ export function StepJudgingConfig() {
   };
 
   const addCriterion = () => {
-    if (formData.judgingCriteria.length >= 5) return;
+    if (formData.judgingCriteria.length >= 10) return;
     const newCriteria = [
       ...formData.judgingCriteria,
       { name: "", description: "", weight: 0, maxScore: 100 },
@@ -111,6 +111,7 @@ export function StepJudgingConfig() {
                   max={100}
                   value={formData.aiJudgingWeight}
                   onChange={(e) => handleAiWeightChange(parseInt(e.target.value))}
+                  onBlur={revalidateIfAttempted}
                   className="w-full accent-blue-500"
                 />
               </div>
@@ -132,6 +133,7 @@ export function StepJudgingConfig() {
                   max={100}
                   value={formData.humanJudgingWeight}
                   onChange={(e) => handleHumanWeightChange(parseInt(e.target.value))}
+                  onBlur={revalidateIfAttempted}
                   className="w-full accent-emerald-500"
                 />
               </div>
@@ -307,9 +309,9 @@ export function StepJudgingConfig() {
             ))}
           </div>
 
-          <Button variant="outline" onClick={addCriterion} className="w-full" disabled={formData.judgingCriteria.length >= 5}>
+          <Button variant="outline" onClick={addCriterion} className="w-full" disabled={formData.judgingCriteria.length >= 10}>
             <Plus className="size-4" />
-            {formData.judgingCriteria.length >= 5 ? "Maximum 5 criteria reached" : "Add Criterion"}
+            {formData.judgingCriteria.length >= 10 ? "Maximum 10 criteria reached" : "Add Criterion"}
           </Button>
         </CardContent>
       </Card>

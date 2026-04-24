@@ -239,7 +239,7 @@ export default async function CompetitionDetailPage({ params }: Props) {
   return (
     <div className="min-h-screen">
       {/* ── Top Nav Bar ── */}
-      <nav className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-md">
+      <nav className="sticky top-20 z-40 border-b border-border bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <Link href="/competitions">
@@ -413,6 +413,7 @@ export default async function CompetitionDetailPage({ params }: Props) {
             <RegistrationStatus
               competitionId={comp.id}
               competitionStatus={comp.status}
+              registrationStart={comp.registrationStart?.toISOString() ?? null}
               registrationEnd={comp.registrationEnd?.toISOString() ?? null}
               submissionEnd={comp.submissionEnd?.toISOString() ?? null}
               visibility={comp.visibility}
@@ -928,6 +929,7 @@ export default async function CompetitionDetailPage({ params }: Props) {
               <RegistrationStatus
                 competitionId={comp.id}
                 competitionStatus={comp.status}
+                registrationStart={comp.registrationStart?.toISOString() ?? null}
                 registrationEnd={comp.registrationEnd?.toISOString() ?? null}
                 submissionEnd={comp.submissionEnd?.toISOString() ?? null}
                 registration={registrationData}

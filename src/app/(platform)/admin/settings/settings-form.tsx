@@ -16,12 +16,6 @@ import {
 import { toast } from "sonner";
 
 interface SettingsState {
-  "judging.ai_weight": string;
-  "judging.human_weight": string;
-  "judging.finalist_count": string;
-  "competition.max_team_size": string;
-  "competition.min_team_size": string;
-  "competition.max_screenshots": string;
   "platform.name": string;
   "platform.support_email": string;
   "platform.maintenance_mode": string;
@@ -29,12 +23,6 @@ interface SettingsState {
 }
 
 const DEFAULTS: SettingsState = {
-  "judging.ai_weight": "30",
-  "judging.human_weight": "70",
-  "judging.finalist_count": "10",
-  "competition.max_team_size": "4",
-  "competition.min_team_size": "1",
-  "competition.max_screenshots": "5",
   "platform.name": "Competition Spark",
   "platform.support_email": "support@competitionspark.com",
   "platform.maintenance_mode": "false",
@@ -63,16 +51,6 @@ export function SettingsForm() {
 
   const update = (key: string, value: string) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
-
-    // Auto-sync judging weights
-    if (key === "judging.ai_weight") {
-      const ai = Math.min(100, Math.max(0, Number(value) || 0));
-      setSettings((prev) => ({ ...prev, "judging.ai_weight": String(ai), "judging.human_weight": String(100 - ai) }));
-    }
-    if (key === "judging.human_weight") {
-      const human = Math.min(100, Math.max(0, Number(value) || 0));
-      setSettings((prev) => ({ ...prev, "judging.human_weight": String(human), "judging.ai_weight": String(100 - human) }));
-    }
   };
 
   const handleSave = async () => {
@@ -115,7 +93,7 @@ export function SettingsForm() {
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Platform Settings</h1>
-            <p className="text-sm text-muted-foreground">Configure defaults for competitions and judging</p>
+            <p className="text-sm text-muted-foreground">Configure platform-wide information</p>
           </div>
         </div>
         <div className="flex gap-2">

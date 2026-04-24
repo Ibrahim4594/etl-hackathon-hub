@@ -102,7 +102,7 @@ export default async function SponsorCompetitionsPage() {
             {sponsorCompetitions.length} hackathon{sponsorCompetitions.length !== 1 ? "s" : ""} · {org.name}
           </p>
         </div>
-        <Link href="/sponsor/competitions/new">
+        <Link href="/organizer/competitions/new">
           <Button className="shadow-sm">
             <Plus className="mr-1.5 h-4 w-4" />
             New Hackathon
@@ -116,7 +116,7 @@ export default async function SponsorCompetitionsPage() {
           title="No hackathons yet"
           description="Launch your first hackathon to discover top talent from across Pakistan."
         >
-          <Link href="/sponsor/competitions/new">
+          <Link href="/organizer/competitions/new">
             <Button>
               <Plus className="mr-1.5 h-4 w-4" />
               Create Hackathon
@@ -211,7 +211,7 @@ export default async function SponsorCompetitionsPage() {
           })}
 
           {/* Create New card */}
-          <Link href="/sponsor/competitions/new">
+          <Link href="/organizer/competitions/new">
             <Card className="group flex h-full min-h-[140px] cursor-pointer items-center justify-center border-2 border-dashed border-border/50 bg-transparent shadow-none transition-all hover:border-primary/40 hover:bg-primary/[0.02]">
               <CardContent className="flex flex-col items-center gap-2 p-5 text-center">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 transition-transform group-hover:scale-110">

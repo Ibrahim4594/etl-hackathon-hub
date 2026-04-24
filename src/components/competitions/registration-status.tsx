@@ -28,6 +28,7 @@ import { toast } from "sonner";
 interface RegistrationStatusProps {
   competitionId: string;
   competitionStatus: string;
+  registrationStart?: string | null;
   registrationEnd: string | null;
   submissionEnd: string | null;
   visibility?: string;
@@ -66,6 +67,7 @@ function formatStatus(status: string): string {
 export function RegistrationStatus({
   competitionId,
   competitionStatus,
+  registrationStart,
   registrationEnd,
   submissionEnd,
   visibility,
@@ -82,9 +84,12 @@ export function RegistrationStatus({
   const isPrivate = visibility === "private";
 
   const now = new Date();
+  const regStart = registrationStart ? new Date(registrationStart) : null;
   const regClosed = registrationEnd && new Date(registrationEnd) < now;
   const subClosed = submissionEnd && new Date(submissionEnd) < now;
   const isActive = competitionStatus === "active";
+  const isApprovedAndOpen = competitionStatus === "approved" && regStart !== null && now >= regStart;
+  const canRegister = isActive || isApprovedAndOpen;
   const isJudging = competitionStatus === "judging";
   const isCompleted = competitionStatus === "completed";
 
@@ -200,8 +205,8 @@ export function RegistrationStatus({
     );
   }
 
-  // State: Not registered, competition active, registration open
-  if (!regData && isActive && !regClosed) {
+  // State: Not registered, competition active or approved+open, registration open
+  if (!regData && canRegister && !regClosed) {
     return (
       <div className="space-y-3">
         {showAccessCodeInput && isPrivate && (

@@ -6,14 +6,10 @@ import { resolveOnboardingUser } from "@/lib/auth/resolve-onboarding-user";
 import { NextResponse } from "next/server";
 import { apiError } from "@/lib/api-error";
 
-// Default settings — used when no DB value exists
+// Default settings — only platform-wide keys.
+// Judging weights, team sizes, and criteria are configured per-competition
+// in the competition wizard and stored on the competitions table.
 const DEFAULTS: Record<string, string> = {
-  "judging.ai_weight": "30",
-  "judging.human_weight": "70",
-  "judging.finalist_count": "10",
-  "competition.max_team_size": "4",
-  "competition.min_team_size": "1",
-  "competition.max_screenshots": "5",
   "platform.name": "Competition Spark",
   "platform.support_email": "support@competitionspark.com",
   "platform.maintenance_mode": "false",

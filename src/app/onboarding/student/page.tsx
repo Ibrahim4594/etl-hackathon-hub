@@ -48,6 +48,7 @@ export default function StudentOnboardingPage() {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<StudentOnboardingInput>({
     resolver: zodResolver(studentOnboardingSchema),
@@ -132,7 +133,9 @@ export default function StudentOnboardingPage() {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="yearOfStudy">Year of Study</Label>
-                <Select onValueChange={(val: string | null) => val && setValue("yearOfStudy", val, { shouldValidate: true })}>
+                <Select
+                  value={watch("yearOfStudy") ?? ""}
+                  onValueChange={(val) => val && setValue("yearOfStudy", val, { shouldValidate: true })}>
                   <SelectTrigger className="rounded-xl h-10">
                     <SelectValue placeholder="Select year" />
                   </SelectTrigger>

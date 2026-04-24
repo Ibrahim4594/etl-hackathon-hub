@@ -327,10 +327,10 @@ export async function POST() {
         organizationId: orgIds[orgIndex],
         createdBy: dbUser.id,
         judgingCriteria: [
-          { name: "Innovation", description: "Uniqueness and creativity of the solution", weight: 30, maxScore: 10 },
-          { name: "Technical Execution", description: "Code quality, architecture, and completeness", weight: 30, maxScore: 10 },
-          { name: "Impact", description: "Real-world applicability and potential impact", weight: 25, maxScore: 10 },
-          { name: "Presentation", description: "Demo quality, documentation, and pitch", weight: 15, maxScore: 10 },
+          { name: "Innovation", description: "Uniqueness and creativity of the solution", weight: 30, maxScore: 100 },
+          { name: "Technical Execution", description: "Code quality, architecture, and completeness", weight: 30, maxScore: 100 },
+          { name: "Impact", description: "Real-world applicability and potential impact", weight: 25, maxScore: 100 },
+          { name: "Presentation", description: "Demo quality, documentation, and pitch", weight: 15, maxScore: 100 },
         ],
         submissionRequirements: {
           githubRequired: true,

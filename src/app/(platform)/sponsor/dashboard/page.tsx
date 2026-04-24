@@ -307,7 +307,7 @@ export default async function SponsorDashboardPage() {
           </div>
 
           <div className="flex gap-3">
-            <Link href="/sponsor/competitions/new">
+            <Link href="/organizer/competitions/new">
               <Button className="gap-1.5 shadow-sm transition-all hover:scale-105 hover:shadow-md">
                 <Sparkles className="h-4 w-4" />
                 Create Competition
@@ -372,7 +372,7 @@ export default async function SponsorDashboardPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               {/* Create new card */}
-              <Link href="/sponsor/competitions/new">
+              <Link href="/organizer/competitions/new">
                 <div className="flex items-center gap-4 rounded-xl border-2 border-dashed border-primary/20 p-4 transition-all hover:border-primary/40 hover:bg-primary/5">
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
                     <Plus className="h-6 w-6 text-primary" />

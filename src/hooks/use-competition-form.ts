@@ -108,16 +108,23 @@ export const useCompetitionForm = create<CompetitionFormState>((set, get) => ({
   stepErrors: {},
   hasAttemptedNext: false,
   setStep: (step) =>
-    set({ currentStep: Math.max(0, Math.min(step, WIZARD_STEPS.length - 1)), stepErrors: {}, hasAttemptedNext: false }),
+    set({
+      currentStep: Math.max(0, Math.min(step, WIZARD_STEPS.length - 1)),
+      stepErrors: {},
+      hasAttemptedNext: false,
+    }),
   updateFormData: (data) =>
     set((state) => {
-      const updatedErrors = { ...state.stepErrors };
-      for (const key of Object.keys(data)) {
-        delete updatedErrors[key];
+      const newFormData = { ...state.formData, ...data };
+      // Only re-run validation (and surface errors) after the user has tried
+      // to advance once — we don't nag users about fields they haven't filled yet.
+      if (!state.hasAttemptedNext) {
+        return { formData: newFormData };
       }
+      const result = runStepValidation(state.currentStep, newFormData);
       return {
-        formData: { ...state.formData, ...data },
-        stepErrors: updatedErrors,
+        formData: newFormData,
+        stepErrors: result.ok ? {} : result.errors,
       };
     }),
   validateStep: () => {
@@ -130,17 +137,19 @@ export const useCompetitionForm = create<CompetitionFormState>((set, get) => ({
     set({ stepErrors: result.errors, hasAttemptedNext: true });
     return false;
   },
-  // Runs validation silently — only surfaces errors if user has already attempted Next.
-  // Used by onBlur handlers so we don't nag users about fields they haven't tried yet.
+  // Runs validation on blur, but only surfaces errors after the user's
+  // first Next-click attempt. Before that, blur is silent.
   revalidateIfAttempted: () => {
     const { currentStep, formData, hasAttemptedNext } = get();
     if (!hasAttemptedNext) return;
     const result = runStepValidation(currentStep, formData);
-    if (result.ok) {
-      set({ stepErrors: {} });
-    } else {
-      set({ stepErrors: result.errors });
-    }
+    set({ stepErrors: result.ok ? {} : result.errors });
   },
-  reset: () => set({ currentStep: 0, formData: { ...initialFormData }, stepErrors: {}, hasAttemptedNext: false }),
+  reset: () =>
+    set({
+      currentStep: 0,
+      formData: { ...initialFormData },
+      stepErrors: {},
+      hasAttemptedNext: false,
+    }),
 }));
