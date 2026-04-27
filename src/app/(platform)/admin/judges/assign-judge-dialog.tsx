@@ -103,9 +103,10 @@ export function AssignJudgeDialog({
           >
             <SelectTrigger className="w-full h-10 rounded-xl bg-background/50">
               <SelectValue placeholder="Select a competition">
-                {selectedCompetition
-                  ? competitions.find((c) => c.id === selectedCompetition)?.title ?? "Select a competition"
-                  : "Select a competition"}
+                {(value: string) => {
+                  if (!value) return "Select a competition";
+                  return competitions.find((c) => c.id === value)?.title ?? value;
+                }}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>

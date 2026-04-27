@@ -1,7 +1,7 @@
 import { serverAuth } from "@/lib/auth/server-auth";
 import { db } from "@/lib/db";
-import { users, teams, competitions, submissions, organizations } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { users, teams, competitions, submissions, organizations, judgeAssignments, judgeEvaluations } from "@/lib/db/schema";
+import { eq, and, count } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { submissionCreateSchema } from "@/lib/validators/submission";
 import { triggerEvent } from "@/lib/services/pusher";
@@ -117,6 +117,32 @@ export async function POST(req: Request) {
         status: "submitted",
       })
       .returning();
+
+    // Auto-assign this new submission to the judge with the fewest current assignments
+    // (true round-robin: keeps load balanced across judges as submissions arrive).
+    try {
+      const assignedJudges = await db
+        .select({
+          judgeId: judgeAssignments.judgeId,
+          assignedCount: count(judgeEvaluations.id),
+        })
+        .from(judgeAssignments)
+        .leftJoin(judgeEvaluations, eq(judgeEvaluations.judgeId, judgeAssignments.judgeId))
+        .where(eq(judgeAssignments.competitionId, competitionId))
+        .groupBy(judgeAssignments.judgeId);
+
+      if (assignedJudges.length > 0) {
+        // Pick the judge with the lowest current load
+        const lightest = assignedJudges.reduce((min, j) =>
+          j.assignedCount < min.assignedCount ? j : min
+        );
+        await db.insert(judgeEvaluations)
+          .values({ judgeId: lightest.judgeId, submissionId: submission.id })
+          .onConflictDoNothing();
+      }
+    } catch (autoErr) {
+      console.error("Auto-assign new submission failed:", autoErr);
+    }
 
     // Trigger real-time events
     try {

@@ -351,7 +351,10 @@ export function StepSponsors() {
                           >
                             <SelectTrigger className="w-full">
                               <SelectValue placeholder="Select type">
-                                {CONTRIBUTION_LABELS[sponsor.contributionType] ?? sponsor.contributionType}
+                                {(value: string) => {
+                                  if (!value) return "Select type";
+                                  return CONTRIBUTION_LABELS[value] ?? value;
+                                }}
                               </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
