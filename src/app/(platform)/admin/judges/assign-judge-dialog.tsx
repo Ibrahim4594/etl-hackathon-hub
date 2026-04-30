@@ -102,12 +102,17 @@ export function AssignJudgeDialog({
             onValueChange={(val) => setSelectedCompetition(val ?? "")}
           >
             <SelectTrigger className="w-full h-10 rounded-xl bg-background/50">
-              <SelectValue placeholder="Select a competition">
-                {(value: string) => {
-                  if (!value) return "Select a competition";
-                  return competitions.find((c) => c.id === value)?.title ?? value;
-                }}
-              </SelectValue>
+              {/*
+                NOTE: do not use <SelectValue> here — Base UI's render-function
+                pattern is unreliable across versions and was rendering the raw
+                competition UUID instead of the title. We render the title
+                manually based on selectedCompetition state.
+              */}
+              <span data-slot="select-value" className="flex flex-1 text-left truncate">
+                {selectedCompetition
+                  ? competitions.find((c) => c.id === selectedCompetition)?.title ?? "Select a competition"
+                  : <span className="text-muted-foreground">Select a competition</span>}
+              </span>
             </SelectTrigger>
             <SelectContent>
               {competitions.length === 0 ? (
