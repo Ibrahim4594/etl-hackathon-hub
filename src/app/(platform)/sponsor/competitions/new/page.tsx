@@ -129,7 +129,14 @@ export default function NewCompetitionPage() {
           humanJudgingWeight: Number(competition.humanJudgingWeight ?? 70),
           finalistCount: Number(competition.finalistCount ?? 10),
           submissionRequirements:
-            (competition.submissionRequirements as never) ?? undefined,
+            (competition.submissionRequirements as never) ?? {
+              githubRequired: true,
+              videoRequired: true,
+              deployedUrlRequired: false,
+              pitchDeckRequired: false,
+              maxScreenshots: 5,
+              screenshotsRequired: false,
+            },
           customSubmissionFields:
             (competition.customSubmissionFields as never[]) ?? [],
           visibility:

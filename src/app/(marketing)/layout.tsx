@@ -169,7 +169,7 @@ function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/sponsor/dashboard" className="hover:text-white transition-colors">
+                <Link href="/organizer/dashboard" className="hover:text-white transition-colors">
                   Organizer Dashboard
                 </Link>
               </li>

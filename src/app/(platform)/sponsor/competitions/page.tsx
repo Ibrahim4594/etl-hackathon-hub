@@ -134,7 +134,7 @@ export default async function SponsorCompetitionsPage() {
 
             return (
               <div key={comp.id} className="flex flex-col gap-2">
-                <Link href={`/sponsor/competitions/${comp.id}`}>
+                <Link href={`/organizer/competitions/${comp.id}`}>
                   <Card className="group relative overflow-hidden border-border/50 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md">
                     {/* Status gradient strip */}
                     <div className={`absolute inset-x-0 top-0 h-1 ${cfg.bg.replace("/10", "")}`} />

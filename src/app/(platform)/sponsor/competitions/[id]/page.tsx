@@ -1,6 +1,7 @@
 import { serverAuth } from "@/lib/auth/server-auth";
 import { redirect, notFound } from "next/navigation";
 import { db } from "@/lib/db";
+import { autoAdvanceCompetitionStatus } from "@/lib/services/competition-status";
 import {
   competitions,
   organizations,
@@ -72,7 +73,16 @@ export default async function SponsorCompetitionDetailPage({
     .where(eq(competitions.id, id));
 
   if (!competition) notFound();
-  if (dbUser.role !== "admin" && competition.createdBy !== dbUser.id) redirect("/sponsor/competitions");
+  if (dbUser.role !== "admin" && competition.createdBy !== dbUser.id) redirect("/organizer/competitions");
+
+  // Lazily advance status when deadlines have passed
+  const liveStatus = await autoAdvanceCompetitionStatus({
+    id: competition.id,
+    status: competition.status,
+    submissionEnd: competition.submissionEnd,
+    judgingEnd: competition.judgingEnd,
+  });
+  competition.status = liveStatus as typeof competition.status;
 
   // Fetch sponsors for this competition
   const competitionSponsorsData = await db

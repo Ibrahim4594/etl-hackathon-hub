@@ -16,7 +16,7 @@ export const ROLE_LABELS: Record<Role, string> = {
 
 export const ROLE_ROUTES: Record<Role, string> = {
   student: "/student/dashboard",
-  sponsor: "/sponsor/dashboard",
+  sponsor: "/organizer/dashboard",
   judge: "/judge/dashboard",
   admin: "/admin/dashboard",
 };

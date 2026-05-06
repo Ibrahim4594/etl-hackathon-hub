@@ -103,22 +103,21 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check judging window and fetch criteria for composite calculation
+    // Fetch competition for judging criteria and status check
     const [comp] = await db
       .select({
-        judgingStart: competitions.judgingStart,
-        judgingEnd: competitions.judgingEnd,
+        status: competitions.status,
         judgingCriteria: competitions.judgingCriteria,
       })
       .from(competitions)
       .where(eq(competitions.id, submission.competitionId));
 
-    const now = new Date();
-    if (comp?.judgingStart && now < new Date(comp.judgingStart)) {
-      return NextResponse.json({ error: "Judging window has not opened yet" }, { status: 400 });
-    }
-    if (comp?.judgingEnd && now > new Date(comp.judgingEnd)) {
-      return NextResponse.json({ error: "Judging window has closed" }, { status: 400 });
+    // Only allow judging when competition is in judging or completed phase
+    if (comp && !["judging", "completed"].includes(comp.status)) {
+      return NextResponse.json(
+        { error: "Judging has not started for this competition yet" },
+        { status: 400 }
+      );
     }
 
     // Verify judge is assigned to this competition
@@ -242,7 +241,9 @@ export async function POST(req: Request) {
         .returning();
     }
 
-    // Update submission status to "judged" if not already at a later stage
+    // Update submission: set humanScore and finalScore (100% human judging).
+    // finalScore drives the leaderboard — set it immediately so rankings
+    // appear as soon as any judge scores, not only after "Announce Winners".
     const laterStatuses = ["finalist", "winner"];
     if (!laterStatuses.includes(submission.status)) {
       await db
@@ -250,6 +251,17 @@ export async function POST(req: Request) {
         .set({
           status: "judged",
           humanScore: compositeScore,
+          finalScore: compositeScore,
+          updatedAt: new Date(),
+        })
+        .where(eq(submissions.id, submissionId));
+    } else {
+      // For finalists/winners, keep the status but still update scores
+      await db
+        .update(submissions)
+        .set({
+          humanScore: compositeScore,
+          finalScore: compositeScore,
           updatedAt: new Date(),
         })
         .where(eq(submissions.id, submissionId));

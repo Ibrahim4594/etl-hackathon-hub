@@ -55,8 +55,8 @@ const initialFormData: CompetitionCreateInput = {
   prizes: [],
   totalPrizePool: 0,
   judgingCriteria: [],
-  aiJudgingWeight: 30,
-  humanJudgingWeight: 70,
+  aiJudgingWeight: 0,
+  humanJudgingWeight: 100,
   finalistCount: 10,
   submissionRequirements: {
     githubRequired: true,
@@ -116,15 +116,22 @@ export const useCompetitionForm = create<CompetitionFormState>((set, get) => ({
   updateFormData: (data) =>
     set((state) => {
       const newFormData = { ...state.formData, ...data };
-      // Only re-run validation (and surface errors) after the user has tried
-      // to advance once — we don't nag users about fields they haven't filled yet.
+      // Don't add new errors mid-typing — that's jarring. Only clear errors
+      // for fields the user just made valid. New errors surface on blur or
+      // when the user clicks Next.
       if (!state.hasAttemptedNext) {
         return { formData: newFormData };
       }
       const result = runStepValidation(state.currentStep, newFormData);
+      const fieldsWithNewError = result.ok ? new Set<string>() : new Set(Object.keys(result.errors));
+      const nextErrors: Record<string, string> = {};
+      for (const [k, msg] of Object.entries(state.stepErrors)) {
+        // Keep an existing error only if the field is still failing
+        if (fieldsWithNewError.has(k)) nextErrors[k] = msg;
+      }
       return {
         formData: newFormData,
-        stepErrors: result.ok ? {} : result.errors,
+        stepErrors: nextErrors,
       };
     }),
   validateStep: () => {

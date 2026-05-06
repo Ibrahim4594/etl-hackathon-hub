@@ -186,6 +186,16 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
+
+    // Defensive cleanup: strip custom submission field rows the user added
+    // but never labeled. Custom fields are optional — empty rows shouldn't
+    // trigger validation errors.
+    if (body && Array.isArray(body.customSubmissionFields)) {
+      body.customSubmissionFields = body.customSubmissionFields.filter(
+        (f: { label?: string }) => f && typeof f.label === "string" && f.label.trim()
+      );
+    }
+
     const parsed = competitionCreateSchema.safeParse(body);
 
     if (!parsed.success) {

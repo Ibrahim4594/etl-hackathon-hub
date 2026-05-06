@@ -180,14 +180,8 @@ export const stepSchemas: Partial<Record<string, z.ZodTypeAny>> = {
 
   "judging-config": z
     .object({
-      aiJudgingWeight: z.number().min(0).max(100),
-      humanJudgingWeight: z.number().min(0).max(100),
       finalistCount: z.number().min(1, "Must have at least 1 finalist"),
       maxParticipants: z.number().min(1).optional(),
-    })
-    .refine((d) => d.aiJudgingWeight + d.humanJudgingWeight === 100, {
-      message: "AI and human weights must sum to 100%",
-      path: ["aiJudgingWeight"],
     })
     .refine((d) => !d.maxParticipants || d.finalistCount <= d.maxParticipants, {
       message: "Number of finalists cannot exceed maximum participants",

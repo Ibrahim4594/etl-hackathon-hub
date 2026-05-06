@@ -25,7 +25,7 @@ export function SidebarNav() {
 
   // Derive role from URL path first (reliable), fallback to Clerk metadata (can be stale)
   const pathSegment = pathname.split("/")[1]; // "student", "sponsor", "organizer", "judge", "admin"
-  // "/organizer/*" is a public alias for "/sponsor/*"; treat both as sponsor role
+  // "/organizer/*" is a public alias for "/organizer/*"; treat both as sponsor role
   const normalizedSegment = pathSegment === "organizer" ? "sponsor" : pathSegment;
   const pathRole = ["student", "sponsor", "judge", "admin"].includes(normalizedSegment) ? normalizedSegment : null;
   const clerkRole = (user?.publicMetadata as { role?: string })?.role;

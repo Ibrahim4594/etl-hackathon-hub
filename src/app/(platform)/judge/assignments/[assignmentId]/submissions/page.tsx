@@ -147,11 +147,8 @@ export default async function AssignmentSubmissionsPage({
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Team: <span className="font-medium text-foreground">{sub.teamName}</span>
-                      {sub.aiScore !== null && (
-                        <span className="ml-3">AI Score: <span className="font-medium text-foreground">{Number(sub.aiScore).toFixed(1)}</span></span>
-                      )}
                       {sub.humanScore !== null && (
-                        <span className="ml-3">Human Score: <span className="font-medium text-foreground">{Number(sub.humanScore).toFixed(1)}</span></span>
+                        <span className="ml-3">Score: <span className="font-medium text-foreground">{Number(sub.humanScore).toFixed(1)}</span></span>
                       )}
                     </p>
                   </div>

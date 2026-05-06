@@ -179,7 +179,7 @@ export async function POST(
                 </a>
               </div>
               <p style="color: #888; font-size: 14px;">
-                You can manage your competition from your <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://competitionspark.com"}/sponsor/competitions/${competition.id}" style="color: #2dd4bf;">sponsor dashboard</a>.
+                You can manage your competition from your <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://competitionspark.com"}/organizer/competitions/${competition.id}" style="color: #2dd4bf;">organizer dashboard</a>.
               </p>
               <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0;" />
               <p style="color: #aaa; font-size: 12px;">

@@ -1,7 +1,7 @@
 import { serverAuth } from "@/lib/auth/server-auth";
 import { db } from "@/lib/db";
-import { users, teams, competitions, submissions, organizations, judgeAssignments, judgeEvaluations } from "@/lib/db/schema";
-import { eq, and, count } from "drizzle-orm";
+import { users, teams, teamMembers, competitions, submissions, organizations, judgeAssignments, judgeEvaluations } from "@/lib/db/schema";
+import { eq, and, count, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { submissionCreateSchema } from "@/lib/validators/submission";
 import { triggerEvent } from "@/lib/services/pusher";
@@ -74,6 +74,32 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Submission deadline has passed" }, { status: 400 });
     }
 
+    // Enforce minimum team size — solo submissions only allowed if explicitly enabled
+    const [{ memberCount }] = await db
+      .select({ memberCount: sql<number>`count(*)::int` })
+      .from(teamMembers)
+      .where(eq(teamMembers.teamId, teamId));
+
+    const teamSize = Number(memberCount ?? 0);
+    if (teamSize < competition.minTeamSize) {
+      if (teamSize === 1 && !competition.allowSoloParticipation) {
+        return NextResponse.json(
+          {
+            error: `This competition does not allow solo submissions. Invite at least ${competition.minTeamSize - 1} more teammate${competition.minTeamSize - 1 !== 1 ? "s" : ""} before submitting.`,
+          },
+          { status: 400 }
+        );
+      }
+      if (teamSize > 1 || competition.minTeamSize > 1) {
+        return NextResponse.json(
+          {
+            error: `Your team has ${teamSize} member${teamSize !== 1 ? "s" : ""}, but this competition requires a minimum of ${competition.minTeamSize}. Invite ${competition.minTeamSize - teamSize} more teammate${competition.minTeamSize - teamSize !== 1 ? "s" : ""} before submitting.`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     // Validate required custom field responses
     const customFields = (competition.customSubmissionFields as { id: string; label: string; required: boolean }[] | null) ?? [];
     if (customFields.length > 0) {
@@ -118,8 +144,8 @@ export async function POST(req: Request) {
       })
       .returning();
 
-    // Auto-assign this new submission to the judge with the fewest current assignments
-    // (true round-robin: keeps load balanced across judges as submissions arrive).
+    // Auto-assign this new submission to the judge with the fewest assignments
+    // in THIS competition (not across all competitions — that skewed counts).
     try {
       const assignedJudges = await db
         .select({
@@ -127,7 +153,15 @@ export async function POST(req: Request) {
           assignedCount: count(judgeEvaluations.id),
         })
         .from(judgeAssignments)
-        .leftJoin(judgeEvaluations, eq(judgeEvaluations.judgeId, judgeAssignments.judgeId))
+        .leftJoin(
+          judgeEvaluations,
+          and(
+            eq(judgeEvaluations.judgeId, judgeAssignments.judgeId),
+            sql`${judgeEvaluations.submissionId} IN (
+              SELECT id FROM submissions WHERE competition_id = ${competitionId}
+            )`
+          )
+        )
         .where(eq(judgeAssignments.competitionId, competitionId))
         .groupBy(judgeAssignments.judgeId);
 

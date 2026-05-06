@@ -41,16 +41,20 @@ export async function POST(
       return NextResponse.json({ error: "Competition not found" }, { status: 404 });
     }
 
-    // Allow registrations for active comps, or approved comps whose registration window has opened
+    // Allow registrations for any non-terminal competition status. The
+    // registration window itself (regStart/regEnd) controls *when* — status
+    // controls *whether the competition is live at all*. Drafts, pending
+    // review, completed, and cancelled comps cannot accept registrations.
     const now = new Date();
     const regStart = competition.registrationStart ? new Date(competition.registrationStart) : null;
     const regEnd = competition.registrationEnd ? new Date(competition.registrationEnd) : null;
 
-    const isActive = competition.status === "active";
-    const isApprovedAndOpen = competition.status === "approved" && regStart !== null && now >= regStart;
-
-    if (!isActive && !isApprovedAndOpen) {
-      return NextResponse.json({ error: "Competition is not accepting registrations yet" }, { status: 400 });
+    const blockedStatuses = ["draft", "pending_review", "completed", "cancelled"];
+    if (blockedStatuses.includes(competition.status)) {
+      return NextResponse.json(
+        { error: "This competition is not accepting registrations." },
+        { status: 400 }
+      );
     }
 
     // Access code validation for private competitions
@@ -61,11 +65,14 @@ export async function POST(
       }
     }
 
-    // Check registration window
-    if (regStart && now < regStart) {
+    // Check registration window — give a 60-second grace period at the
+    // boundaries so clock drift between client and server doesn't surprise
+    // a participant clicking Register at the exact open/close moment.
+    const GRACE_MS = 60_000;
+    if (regStart && now.getTime() + GRACE_MS < regStart.getTime()) {
       return NextResponse.json({ error: "Registration has not opened yet" }, { status: 400 });
     }
-    if (regEnd && regEnd < now) {
+    if (regEnd && regEnd.getTime() + GRACE_MS < now.getTime()) {
       return NextResponse.json({ error: "Registration deadline has passed" }, { status: 400 });
     }
 

@@ -63,3 +63,4 @@ plans/
 
 # Scripts (one-time use)
 scripts/
+.env*.local

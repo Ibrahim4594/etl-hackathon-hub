@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { competitions, competitionSponsors, organizations, teamMembers, teams, submissions, users } from "@/lib/db/schema";
 import { eq, and, asc, sql } from "drizzle-orm";
+import { autoAdvanceCompetitionStatus } from "@/lib/services/competition-status";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -87,6 +88,15 @@ export default async function CompetitionDetailPage({ params }: Props) {
     .where(eq(competitions.slug, slug));
 
   if (!result) notFound();
+
+  // Lazily advance status when deadlines have passed
+  const liveStatus = await autoAdvanceCompetitionStatus({
+    id: result.competition.id,
+    status: result.competition.status,
+    submissionEnd: result.competition.submissionEnd,
+    judgingEnd: result.competition.judgingEnd,
+  });
+  result.competition.status = liveStatus as typeof result.competition.status;
 
   const comp = result.competition;
   const prizes = (comp.prizes as { position: number; title: string; amount: number; currency: string; description?: string }[]) || [];
@@ -239,7 +249,7 @@ export default async function CompetitionDetailPage({ params }: Props) {
   return (
     <div className="min-h-screen">
       {/* ── Top Nav Bar ── */}
-      <nav className="sticky top-20 z-40 border-b border-border bg-background/80 backdrop-blur-md">
+      <nav className="sticky top-24 z-40 border-b border-border bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <Link href="/competitions">
@@ -255,9 +265,9 @@ export default async function CompetitionDetailPage({ params }: Props) {
         </div>
       </nav>
 
-      {/* ── Visible Cover Banner ── */}
-      {comp.coverImageUrl && (
-        <div className="relative h-48 w-full overflow-hidden sm:h-64 md:h-80">
+      {/* ── Visible Cover Banner (always shown — uploaded image or category gradient fallback) ── */}
+      <div className="relative h-48 w-full overflow-hidden sm:h-64 md:h-80">
+        {comp.coverImageUrl ? (
           <Image
             src={comp.coverImageUrl}
             alt={comp.title}
@@ -265,9 +275,25 @@ export default async function CompetitionDetailPage({ params }: Props) {
             priority
             className="object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent" />
-        </div>
-      )}
+        ) : (
+          <div className={`absolute inset-0 bg-gradient-to-br ${getCategoryGradient(comp.category)}`}>
+            <div className="absolute inset-0 grain opacity-30" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center px-6">
+                {comp.category && (
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/70">
+                    {comp.category}
+                  </p>
+                )}
+                <h2 className="mt-3 text-3xl font-bold text-white drop-shadow-lg sm:text-4xl md:text-5xl line-clamp-2">
+                  {comp.title}
+                </h2>
+              </div>
+            </div>
+          </div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent" />
+      </div>
 
       {/* ── Hero Banner ── */}
       <section className="relative overflow-hidden border-b border-border">
@@ -380,15 +406,15 @@ export default async function CompetitionDetailPage({ params }: Props) {
             </div>
           </div>
 
-          {/* View Results CTA */}
-          {(comp.status === "judging" || comp.status === "completed") && (
+          {/* View Results / Leaderboard CTA */}
+          {(comp.status === "active" || comp.status === "judging" || comp.status === "completed") && (
             <div className="mt-5">
               <Link
                 href={`/competitions/${slug}/leaderboard`}
                 className="inline-flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-semibold text-amber-500 transition-colors hover:bg-amber-500/20"
               >
                 <BarChart3 className="h-4 w-4" />
-                {comp.status === "completed" ? "View Results & Winners" : "View Leaderboard"}
+                {comp.status === "completed" ? "View Results & Winners" : comp.status === "judging" ? "View Leaderboard" : "View Live Rankings"}
                 <Trophy className="h-4 w-4" />
               </Link>
             </div>

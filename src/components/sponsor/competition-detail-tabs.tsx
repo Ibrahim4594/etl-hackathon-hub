@@ -184,9 +184,6 @@ export function CompetitionDetailTabs({
   const isLive = c.status === "active";
   const totalSubs = submissions.length;
 
-  const avgAi =
-    submissions.filter((s) => s.aiScore !== null).reduce((a, s) => a + (s.aiScore ?? 0), 0) /
-      (submissions.filter((s) => s.aiScore !== null).length || 1) || 0;
   const avgHuman =
     submissions.filter((s) => s.humanScore !== null).reduce((a, s) => a + (s.humanScore ?? 0), 0) /
       (submissions.filter((s) => s.humanScore !== null).length || 1) || 0;
@@ -261,6 +258,14 @@ export function CompetitionDetailTabs({
                   <Button variant="ghost" size="sm">
                     <ArrowUpRight className="mr-1.5 h-3.5 w-3.5" />
                     Public Page
+                  </Button>
+                </Link>
+              )}
+              {c.slug && (c.status === "active" || c.status === "judging" || c.status === "completed") && (
+                <Link href={`/competitions/${c.slug}/leaderboard`} target="_blank">
+                  <Button variant="ghost" size="sm">
+                    <BarChart3 className="mr-1.5 h-3.5 w-3.5" />
+                    Leaderboard
                   </Button>
                 </Link>
               )}
@@ -356,6 +361,18 @@ export function CompetitionDetailTabs({
             </div>
           )}
 
+          {/* Approved/Live edit note */}
+          {(c.status === "approved" || c.status === "active") && (
+            <div className="flex items-center gap-2 rounded-lg border border-blue-500/20 bg-blue-500/5 p-3">
+              <Info className="h-4 w-4 shrink-0 text-blue-500" />
+              <p className="text-xs text-blue-600 dark:text-blue-400">
+                {c.status === "approved"
+                  ? "Approved competitions cannot be edited. To make changes, click Unpublish to send it back for review."
+                  : "Live competitions cannot be fully edited. Use Extend Deadlines for date changes, or Unpublish to make broader edits."}
+              </p>
+            </div>
+          )}
+
           {/* Submission Pipeline */}
           <Card className="border-border/50 shadow-sm">
             <CardHeader className="pb-3">
@@ -367,12 +384,11 @@ export function CompetitionDetailTabs({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {(
                   [
                     { key: "submitted", label: "Submitted", color: "bg-blue-500" },
                     { key: "valid", label: "Valid", color: "bg-emerald-500" },
-                    { key: "ai_evaluated", label: "AI Scored", color: "bg-purple-500" },
                     { key: "judged", label: "Judged", color: "bg-amber-500" },
                     { key: "finalist", label: "Finalists", color: "bg-primary" },
                   ] as const
@@ -415,24 +431,11 @@ export function CompetitionDetailTabs({
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">AI Score</span>
-                  <div className="flex items-center gap-2">
-                    <Progress value={avgAi * 10} className="h-2 w-20" />
-                    <span className="text-sm font-semibold">{avgAi > 0 ? avgAi.toFixed(1) : "—"}</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Human Score</span>
+                  <span className="text-sm text-muted-foreground">Avg Judge Score</span>
                   <div className="flex items-center gap-2">
                     <Progress value={avgHuman * 10} className="h-2 w-20" />
                     <span className="text-sm font-semibold">{avgHuman > 0 ? avgHuman.toFixed(1) : "—"}</span>
                   </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Judging Weights</span>
-                  <span className="text-xs text-muted-foreground">
-                    AI {c.aiJudgingWeight}% · Human {c.humanJudgingWeight}%
-                  </span>
                 </div>
               </CardContent>
             </Card>
@@ -576,7 +579,7 @@ export function CompetitionDetailTabs({
                     <div key={s.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/50 p-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">{s.companyName}</span>
+                          <span className="text-sm font-semibold">{s.companyName}</span>
                           {s.isOrganizer && (
                             <Badge variant="outline" className="shrink-0 text-[10px]">Organizer</Badge>
                           )}
@@ -730,7 +733,7 @@ export function CompetitionDetailTabs({
                       {/* Info */}
                       <div className="flex-1 min-w-0">
                         <Link
-                          href={`/sponsor/competitions/${c.id}/submissions/${sub.id}`}
+                          href={`/organizer/competitions/${c.id}/submissions/${sub.id}`}
                           className="truncate text-sm font-semibold hover:text-primary transition-colors"
                         >
                           {sub.title}

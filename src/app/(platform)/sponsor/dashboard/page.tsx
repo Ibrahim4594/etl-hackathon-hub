@@ -313,7 +313,7 @@ export default async function SponsorDashboardPage() {
                 Create Competition
               </Button>
             </Link>
-            <Link href="/sponsor/analytics">
+            <Link href="/organizer/analytics">
               <Button variant="outline" className="gap-1.5">
                 <BarChart3 className="h-4 w-4" />
                 Analytics
@@ -364,7 +364,7 @@ export default async function SponsorDashboardPage() {
                 </div>
                 My Competitions
               </CardTitle>
-              <Link href="/sponsor/competitions">
+              <Link href="/organizer/competitions">
                 <Button variant="ghost" size="sm" className="gap-1 text-xs">
                   View All <ArrowRight className="h-3 w-3" />
                 </Button>
@@ -475,7 +475,7 @@ export default async function SponsorDashboardPage() {
 
                         {/* Actions */}
                         <div className="mt-3 flex gap-2">
-                          <Link href={`/sponsor/competitions/${comp.id}`}>
+                          <Link href={`/organizer/competitions/${comp.id}`}>
                             <Button
                               size="sm"
                               className="h-7 gap-1 text-xs"
@@ -484,7 +484,7 @@ export default async function SponsorDashboardPage() {
                             </Button>
                           </Link>
                           <Link
-                            href={`/sponsor/competitions/${comp.id}/submissions`}
+                            href={`/organizer/competitions/${comp.id}/submissions`}
                           >
                             <Button
                               variant="outline"

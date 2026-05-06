@@ -15,6 +15,7 @@ const updateSchema = z.object({
   contactPersonName: z.string().optional(),
   contactEmail: z.string().optional(),
   contactPhone: z.string().optional(),
+  logoUrl: z.string().nullable().optional(),
 });
 
 export async function PATCH(request: Request) {
@@ -59,6 +60,7 @@ export async function PATCH(request: Request) {
         contactPersonName: data.contactPersonName || null,
         contactEmail: data.contactEmail || null,
         contactPhone: data.contactPhone || null,
+        logoUrl: data.logoUrl ?? null,
         updatedAt: new Date(),
       })
       .where(eq(organizations.id, org.id));

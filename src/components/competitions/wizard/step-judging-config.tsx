@@ -7,9 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Scale, Plus, Trash2, Bot, UserCheck } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Scale, Plus, Trash2 } from "lucide-react";
 
 export function StepJudgingConfig() {
   const { formData, updateFormData, stepErrors, revalidateIfAttempted } = useCompetitionForm();
@@ -58,25 +56,8 @@ export function StepJudgingConfig() {
     0
   );
 
-  const handleAiWeightChange = (value: number) => {
-    const clamped = Math.max(0, Math.min(100, value));
-    updateFormData({
-      aiJudgingWeight: clamped,
-      humanJudgingWeight: 100 - clamped,
-    });
-  };
-
-  const handleHumanWeightChange = (value: number) => {
-    const clamped = Math.max(0, Math.min(100, value));
-    updateFormData({
-      humanJudgingWeight: clamped,
-      aiJudgingWeight: 100 - clamped,
-    });
-  };
-
   return (
     <div className="space-y-6">
-      {/* AI vs Human Judging Weight */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -84,90 +65,10 @@ export function StepJudgingConfig() {
             Judging Configuration
           </CardTitle>
           <CardDescription>
-            Configure how submissions will be evaluated. Set the balance between
-            AI-assisted and human judging.
+            Configure how submissions will be evaluated by your judges.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Weight Sliders */}
-          <div className="space-y-4">
-            <Label>AI vs Human Judging Balance</Label>
-
-            <div className="space-y-4 rounded-lg border p-4">
-              {/* AI Weight */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Bot className="size-4 text-blue-500" />
-                    <span className="text-sm font-medium">AI Judging</span>
-                  </div>
-                  <span className="text-sm font-semibold text-blue-500">
-                    {formData.aiJudgingWeight}%
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  value={formData.aiJudgingWeight}
-                  onChange={(e) => handleAiWeightChange(parseInt(e.target.value))}
-                  onBlur={revalidateIfAttempted}
-                  className="w-full accent-blue-500"
-                />
-              </div>
-
-              {/* Human Weight */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <UserCheck className="size-4 text-emerald-500" />
-                    <span className="text-sm font-medium">Human Judging</span>
-                  </div>
-                  <span className="text-sm font-semibold text-emerald-500">
-                    {formData.humanJudgingWeight}%
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  value={formData.humanJudgingWeight}
-                  onChange={(e) => handleHumanWeightChange(parseInt(e.target.value))}
-                  onBlur={revalidateIfAttempted}
-                  className="w-full accent-emerald-500"
-                />
-              </div>
-
-              {/* Visual bar */}
-              <div className="flex h-3 overflow-hidden rounded-full">
-                <div
-                  className="bg-blue-500 transition-all"
-                  style={{ width: `${formData.aiJudgingWeight}%` }}
-                />
-                <div
-                  className="bg-emerald-500 transition-all"
-                  style={{ width: `${formData.humanJudgingWeight}%` }}
-                />
-              </div>
-
-              <p
-                className={cn(
-                  "text-xs",
-                  formData.aiJudgingWeight + formData.humanJudgingWeight === 100
-                    ? "text-muted-foreground"
-                    : "text-destructive"
-                )}
-              >
-                {formData.aiJudgingWeight + formData.humanJudgingWeight === 100
-                  ? "Weights sum to 100%"
-                  : `Weights must sum to 100% (currently ${formData.aiJudgingWeight + formData.humanJudgingWeight}%)`}
-              </p>
-              {stepErrors.aiJudgingWeight && (
-                <p className="text-xs text-destructive mt-1">{stepErrors.aiJudgingWeight}</p>
-              )}
-            </div>
-          </div>
-
           {/* Finalist Count */}
           <div className="space-y-2">
             <Label htmlFor="finalistCount">Number of Finalists</Label>

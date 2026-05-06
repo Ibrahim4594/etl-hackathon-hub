@@ -47,7 +47,7 @@ export default async function SponsorJudgesPage({
     .where(eq(competitions.id, id));
 
   if (!competition) notFound();
-  if (dbUser.role !== "admin" && competition.createdBy !== dbUser.id) redirect("/sponsor/competitions");
+  if (dbUser.role !== "admin" && competition.createdBy !== dbUser.id) redirect("/organizer/competitions");
 
   // Count total submissions for this competition
   const [subCountResult] = await db
@@ -84,7 +84,7 @@ export default async function SponsorJudgesPage({
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <Link href={`/sponsor/competitions/${id}`}>
+          <Link href={`/organizer/competitions/${id}`}>
             <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="Go back">
               <ArrowLeft className="h-4 w-4" />
             </Button>

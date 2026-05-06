@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import { useCompetitionForm } from "@/hooks/use-competition-form";
 import { pktLocalToUtcIso } from "@/lib/utils/timezone";
 import { Button } from "@/components/ui/button";
@@ -126,16 +127,42 @@ export function StepReview() {
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        // Show field-level validation errors if available
+        // Convert raw zod issues into a user-centric, friendly message
         if (data.issues && Array.isArray(data.issues)) {
-          const messages = (data.issues as { message?: string }[])
-            .map((issue) => issue.message || "Invalid value")
+          const friendly = (data.issues as { path?: (string | number)[]; message?: string }[])
+            .map((issue) => {
+              const fieldPath = (issue.path ?? []).join(".");
+              const friendlyField = fieldPath
+                .replace(/customSubmissionFields\.\d+\.label/, "Custom field label")
+                .replace(/customSubmissionFields/, "Custom fields")
+                .replace(/registrationStart/, "Registration start")
+                .replace(/registrationEnd/, "Registration end")
+                .replace(/submissionStart/, "Submission start")
+                .replace(/submissionEnd/, "Submission deadline")
+                .replace(/judgingStart/, "Judging start")
+                .replace(/judgingEnd/, "Judging end")
+                .replace(/resultsDate/, "Results date")
+                .replace(/aiJudgingWeight|humanJudgingWeight/, "Judging weights")
+                .replace(/maxTeamSize/, "Max team size")
+                .replace(/minTeamSize/, "Min team size")
+                .replace(/finalistCount/, "Finalist count")
+                .replace(/maxParticipants/, "Max participants")
+                .replace(/^\w/, (c) => c.toUpperCase());
+              return friendlyField
+                ? `${friendlyField}: ${issue.message || "Invalid value"}`
+                : (issue.message || "Invalid value");
+            })
             .filter(Boolean);
-          throw new Error(messages.join(". "));
+          throw new Error(friendly.join("\n"));
         }
-        throw new Error(data.error || `Request failed with status ${response.status}`);
+        throw new Error(data.error || "Something went wrong. Please review your details and try again.");
       }
 
+      toast.success(
+        editId
+          ? "Changes saved!"
+          : "Competition sent for review! An admin will approve it shortly."
+      );
       setSubmitSuccess(true);
     } catch (err) {
       setSubmitError(
@@ -147,27 +174,7 @@ export function StepReview() {
   };
 
   if (submitSuccess) {
-    return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-16">
-          <CheckCircle className="size-16 text-primary" />
-          <h2 className="mt-4 text-xl font-semibold">
-            {editId ? "Competition Updated!" : "Competition Sent for Review!"}
-          </h2>
-          <p className="mt-2 text-sm text-muted-foreground text-center max-w-md">
-            {editId
-              ? "Your changes have been saved successfully."
-              : "Your competition has been submitted for review. An admin will review and approve it before it goes live. You will be notified once it is approved."}
-          </p>
-          <Button
-            className="mt-6"
-            onClick={() => { reset(); router.push("/organizer/competitions"); }}
-          >
-            Go to Hackathon Management
-          </Button>
-        </CardContent>
-      </Card>
-    );
+    return <SuccessCard editId={editId} reset={reset} router={router} />;
   }
 
   return (
@@ -506,5 +513,56 @@ export function StepReview() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function SuccessCard({
+  editId,
+  reset,
+  router,
+}: {
+  editId: string | null;
+  reset: () => void;
+  router: ReturnType<typeof useRouter>;
+}) {
+  const [secondsLeft, setSecondsLeft] = useState(3);
+
+  useEffect(() => {
+    const tick = setInterval(() => {
+      setSecondsLeft((s) => Math.max(0, s - 1));
+    }, 1000);
+    const redirect = setTimeout(() => {
+      reset();
+      router.push("/organizer/competitions");
+    }, 3000);
+    return () => {
+      clearInterval(tick);
+      clearTimeout(redirect);
+    };
+  }, [reset, router]);
+
+  return (
+    <Card>
+      <CardContent className="flex flex-col items-center justify-center py-16">
+        <CheckCircle className="size-16 text-primary" />
+        <h2 className="mt-4 text-xl font-semibold">
+          {editId ? "Competition Updated!" : "Competition Sent for Review!"}
+        </h2>
+        <p className="mt-2 text-sm text-muted-foreground text-center max-w-md">
+          {editId
+            ? "Your changes have been saved successfully."
+            : "Your competition has been submitted for review. An admin will review and approve it before it goes live. You will be notified once it is approved."}
+        </p>
+        <p className="mt-4 text-xs text-muted-foreground">
+          Redirecting to Hackathon Management in {secondsLeft}s…
+        </p>
+        <Button
+          className="mt-4"
+          onClick={() => { reset(); router.push("/organizer/competitions"); }}
+        >
+          Go to Hackathon Management Now
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

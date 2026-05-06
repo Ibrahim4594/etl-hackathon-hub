@@ -404,82 +404,6 @@ export default async function SubmissionDetailPage({
             </Card>
           )}
 
-          {/* AI Evaluation */}
-          {aiEval && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Brain className="h-5 w-5" />
-                  AI Evaluation
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {aiEval.summary && (
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    {aiEval.summary}
-                  </p>
-                )}
-
-                {aiEval.scores && (
-                  <div className="space-y-2.5">
-                    {(
-                      [
-                        { key: "innovation", label: "Innovation", color: "bg-purple-500" },
-                        { key: "technical", label: "Technical", color: "bg-blue-500" },
-                        { key: "impact", label: "Impact", color: "bg-green-500" },
-                        { key: "design", label: "Design", color: "bg-pink-500" },
-                      ] as const
-                    ).map(({ key, label, color }) => {
-                      const score = aiEval.scores![key];
-                      return (
-                        <div key={key}>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium">{label}</span>
-                            <span className="text-xs font-semibold">{score.toFixed(1)}/10</span>
-                          </div>
-                          <div className="h-1.5 w-full rounded-full bg-muted">
-                            <div
-                              className={`h-full rounded-full ${color} transition-all`}
-                              style={{ width: `${(score / 10) * 100}%` }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {aiEval.compositeScore !== null && (
-                  <>
-                    <Separator />
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium flex items-center gap-1.5">
-                        <Zap className="h-3.5 w-3.5 text-primary" />
-                        Composite
-                      </span>
-                      <span className="text-lg font-bold text-primary">
-                        {aiEval.compositeScore.toFixed(1)}
-                      </span>
-                    </div>
-                  </>
-                )}
-
-                {aiEval.flags && aiEval.flags.length > 0 && (
-                  <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-2.5">
-                    <p className="text-xs font-medium text-yellow-500 mb-1">Flags</p>
-                    <ul className="space-y-0.5">
-                      {aiEval.flags.map((flag, i) => (
-                        <li key={i} className="text-[11px] text-muted-foreground flex items-start gap-1">
-                          <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5 text-yellow-500" />
-                          {flag}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
 
           {/* Scores */}
           <Card>
@@ -492,16 +416,6 @@ export default async function SubmissionDetailPage({
             <CardContent>
               {hasScores ? (
                 <div className="space-y-3">
-                  {submission.aiScore !== null && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">
-                        AI Score
-                      </span>
-                      <span className="text-sm font-semibold">
-                        {submission.aiScore.toFixed(1)}
-                      </span>
-                    </div>
-                  )}
                   {submission.humanScore !== null && (
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">
@@ -512,8 +426,7 @@ export default async function SubmissionDetailPage({
                       </span>
                     </div>
                   )}
-                  {(submission.aiScore !== null || submission.humanScore !== null) &&
-                    submission.finalScore !== null && <Separator />}
+                  {submission.humanScore !== null && submission.finalScore !== null && <Separator />}
                   {submission.finalScore !== null && (
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">Final Score</span>

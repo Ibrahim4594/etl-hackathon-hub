@@ -372,7 +372,7 @@ export default async function LandingPage() {
     : !role
       ? "/onboarding"
       : role === "sponsor"
-        ? "/sponsor/competitions/new"
+        ? "/organizer/competitions/new"
         : `/${role}/dashboard`;
 
   return (

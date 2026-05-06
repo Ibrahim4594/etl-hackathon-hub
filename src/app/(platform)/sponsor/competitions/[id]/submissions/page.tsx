@@ -85,7 +85,7 @@ export default async function SponsorSubmissionsPage({
     .where(eq(competitions.id, id));
 
   if (!competition) notFound();
-  if (dbUser.role !== "admin" && competition.createdBy !== dbUser.id) redirect("/sponsor/competitions");
+  if (dbUser.role !== "admin" && competition.createdBy !== dbUser.id) redirect("/organizer/competitions");
 
   // Fetch all submissions for this competition
   const allSubmissions = await db
@@ -142,13 +142,9 @@ export default async function SponsorSubmissionsPage({
     (s) => s.status === "valid" || s.status === "ai_evaluated" || s.status === "judged" || s.status === "finalist" || s.status === "winner"
   ).length;
   const flaggedCount = allSubmissions.filter((s) => s.status === "flagged").length;
-  const aiScores = allSubmissions
-    .map((s) => s.aiScore)
-    .filter((score): score is number => score !== null);
-  const avgAiScore =
-    aiScores.length > 0
-      ? (aiScores.reduce((a, b) => a + b, 0) / aiScores.length).toFixed(1)
-      : "N/A";
+  const judgedCount = allSubmissions.filter(
+    (s) => s.status === "judged" || s.status === "finalist" || s.status === "winner"
+  ).length;
 
   // Filter
   const filtered = allSubmissions.filter((s) => filterMatches(s.status, activeFilter));
@@ -170,7 +166,7 @@ export default async function SponsorSubmissionsPage({
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <Link href={`/sponsor/competitions/${id}`}>
+          <Link href={`/organizer/competitions/${id}`}>
             <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="Go back">
               <ArrowLeft className="h-4 w-4" />
             </Button>
@@ -227,8 +223,8 @@ export default async function SponsorSubmissionsPage({
               <BarChart3 className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{avgAiScore}</p>
-              <p className="text-xs text-muted-foreground">Avg AI Score</p>
+              <p className="text-2xl font-bold">{judgedCount}</p>
+              <p className="text-xs text-muted-foreground">Judged</p>
             </div>
           </CardContent>
         </Card>
@@ -262,8 +258,8 @@ export default async function SponsorSubmissionsPage({
             key={tab.key}
             href={
               tab.key === "all"
-                ? `/sponsor/competitions/${id}/submissions`
-                : `/sponsor/competitions/${id}/submissions?filter=${tab.key}`
+                ? `/organizer/competitions/${id}/submissions`
+                : `/organizer/competitions/${id}/submissions?filter=${tab.key}`
             }
           >
             <Button
@@ -305,9 +301,7 @@ export default async function SponsorSubmissionsPage({
                     <th className="px-4 py-3">Project Title</th>
                     <th className="px-4 py-3">Team</th>
                     <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3 text-right">AI Score</th>
-                    <th className="px-4 py-3 text-right">Human Score</th>
-                    <th className="px-4 py-3 text-right">Final Score</th>
+                    <th className="px-4 py-3 text-right">Score</th>
                     <th className="px-4 py-3 text-right">Rank</th>
                     <th className="px-4 py-3 text-right">Submitted At</th>
                     <th className="px-4 py-3 text-right">Actions</th>
@@ -321,7 +315,7 @@ export default async function SponsorSubmissionsPage({
                     >
                       <td className="px-4 py-3">
                         <Link
-                          href={`/sponsor/competitions/${id}/submissions/${sub.id}`}
+                          href={`/organizer/competitions/${id}/submissions/${sub.id}`}
                           className="font-medium hover:text-primary transition-colors"
                         >
                           {sub.title}
@@ -341,33 +335,11 @@ export default async function SponsorSubmissionsPage({
                           {getSubmissionStatusLabel(sub.status)}
                         </Badge>
                       </td>
-                      <td className="px-4 py-3 text-right text-sm tabular-nums">
-                        {sub.aiScore !== null ? (
-                          <span
-                            className={
-                              Number(sub.aiScore) >= 7
-                                ? "text-emerald-500"
-                                : Number(sub.aiScore) >= 5
-                                  ? "text-amber-500"
-                                  : "text-red-400"
-                            }
-                          >
-                            {Number(sub.aiScore).toFixed(1)}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">--</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right text-sm tabular-nums">
-                        {sub.humanScore !== null ? (
-                          Number(sub.humanScore).toFixed(1)
-                        ) : (
-                          <span className="text-muted-foreground">--</span>
-                        )}
-                      </td>
                       <td className="px-4 py-3 text-right text-sm font-semibold tabular-nums">
                         {sub.finalScore !== null ? (
-                          Number(sub.finalScore).toFixed(1)
+                          <span className="text-primary">{Number(sub.finalScore).toFixed(1)}</span>
+                        ) : sub.humanScore !== null ? (
+                          Number(sub.humanScore).toFixed(1)
                         ) : (
                           <span className="text-muted-foreground">--</span>
                         )}
@@ -390,7 +362,7 @@ export default async function SponsorSubmissionsPage({
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex gap-2 justify-end">
-                          <Link href={`/sponsor/competitions/${id}/submissions/${sub.id}`}>
+                          <Link href={`/organizer/competitions/${id}/submissions/${sub.id}`}>
                             <Button size="sm" variant="outline">View Submission</Button>
                           </Link>
                           <AssignSubmissionDialog

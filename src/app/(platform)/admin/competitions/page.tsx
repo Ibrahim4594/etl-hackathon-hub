@@ -8,6 +8,7 @@ import { resolveOnboardingUser } from "@/lib/auth/resolve-onboarding-user";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -16,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Trophy, Globe, Lock } from "lucide-react";
+import { Trophy, Globe, Lock, BarChart3 } from "lucide-react";
 import { AdminCompetitionActions } from "./actions";
 import { GoLiveButton } from "@/components/competitions/go-live-button";
 import { HackathonManagementActions } from "@/components/competitions/hackathon-management-actions";
@@ -221,6 +222,14 @@ export default async function AdminCompetitionsPage({ searchParams }: PageProps)
                       )}
                       {comp.status === "approved" && (
                         <GoLiveButton competitionId={comp.id} size="sm" />
+                      )}
+                      {comp.slug && (comp.status === "active" || comp.status === "judging" || comp.status === "completed") && (
+                        <Link href={`/competitions/${comp.slug}/leaderboard`} target="_blank">
+                          <Button size="sm" variant="ghost" className="gap-1">
+                            <BarChart3 className="h-3.5 w-3.5" />
+                            Leaderboard
+                          </Button>
+                        </Link>
                       )}
                       <HackathonManagementActions
                         competitionId={comp.id}

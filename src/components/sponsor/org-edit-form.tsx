@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Save, X, Pencil } from "lucide-react";
 import { toast } from "sonner";
+import { ImageUpload } from "@/components/shared/image-upload";
 
 const orgSchema = z.object({
   name: z.string().min(2, "Organization name is required"),
@@ -39,12 +40,14 @@ interface OrgData {
   contactEmail: string | null;
   contactPhone: string | null;
   contactPersonName: string | null;
+  logoUrl: string | null;
 }
 
 export function OrgEditForm({ org }: { org: OrgData }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string>(org.logoUrl ?? "");
 
   const {
     register,
@@ -70,7 +73,7 @@ export function OrgEditForm({ org }: { org: OrgData }) {
       const res = await fetch("/api/sponsor/organization", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: JSON.stringify({ ...values, logoUrl: logoUrl || null }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to update");
@@ -105,6 +108,19 @@ export function OrgEditForm({ org }: { org: OrgData }) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-2">
+            <Label>Organization Logo</Label>
+            <p className="text-xs text-muted-foreground">
+              Recommended size: 200x200px. Square format works best.
+            </p>
+            <ImageUpload
+              value={logoUrl}
+              onChange={setLogoUrl}
+              label="Upload Logo"
+              aspect="square"
+              placeholder={org.name}
+            />
+          </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="org-name">Organization Name</Label>

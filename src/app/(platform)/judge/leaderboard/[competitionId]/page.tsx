@@ -8,7 +8,7 @@ import {
   teams,
   judgeAssignments,
 } from "@/lib/db/schema";
-import { eq, and, asc } from "drizzle-orm";
+import { eq, and, asc, sql } from "drizzle-orm";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
@@ -103,8 +103,10 @@ export default async function JudgeLeaderboardPage({
 
   if (!competition) notFound();
 
-  // Fetch rankings
-  const rankings = await db
+  // Fetch final rankings if computed; otherwise fall back to live scored
+  // submissions so judges can see progress before the official ranking job
+  // runs. Even a single scored submission or finalist should be visible.
+  const finalRankingsRows = await db
     .select({
       id: finalRankings.id,
       rank: finalRankings.rank,
@@ -123,6 +125,52 @@ export default async function JudgeLeaderboardPage({
     .innerJoin(teams, eq(finalRankings.teamId, teams.id))
     .where(eq(finalRankings.competitionId, competitionId))
     .orderBy(asc(finalRankings.rank));
+
+  let rankings = finalRankingsRows;
+  if (rankings.length === 0) {
+    const scoredSubs = await db
+      .select({
+        submissionId: submissions.id,
+        submissionTitle: submissions.title,
+        aiScore: submissions.aiScore,
+        humanScore: submissions.humanScore,
+        finalScore: submissions.finalScore,
+        rank: submissions.rank,
+        status: submissions.status,
+        teamId: teams.id,
+        teamName: teams.name,
+      })
+      .from(submissions)
+      .innerJoin(teams, eq(submissions.teamId, teams.id))
+      .where(
+        and(
+          eq(submissions.competitionId, competitionId),
+          sql`(
+            ${submissions.finalScore} IS NOT NULL OR
+            ${submissions.aiScore} IS NOT NULL OR
+            ${submissions.humanScore} IS NOT NULL OR
+            ${submissions.status} IN ('finalist', 'winner', 'judged')
+          )`
+        )
+      )
+      .orderBy(
+        sql`COALESCE(${submissions.finalScore}, ${submissions.aiScore}, ${submissions.humanScore}, 0) DESC`
+      );
+
+    rankings = scoredSubs.map((s, idx) => ({
+      id: s.submissionId,
+      rank: s.rank ?? idx + 1,
+      aiScore: s.aiScore,
+      humanScoreNormalized: s.humanScore,
+      finalScore: s.finalScore ?? s.aiScore ?? s.humanScore ?? 0,
+      isFinalist: s.status === "finalist" || s.status === "winner",
+      isWinner: s.status === "winner",
+      submissionId: s.submissionId,
+      submissionTitle: s.submissionTitle,
+      teamId: s.teamId,
+      teamName: s.teamName,
+    }));
+  }
 
   return (
     <div className="space-y-8">

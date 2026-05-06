@@ -48,8 +48,8 @@ export async function createCheckoutSession(params: {
       competitionId,
       organizationId,
     },
-    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/sponsor/competitions/${competitionId}?payment=success`,
-    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/sponsor/competitions/${competitionId}?payment=cancelled`,
+    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/organizer/competitions/${competitionId}?payment=success`,
+    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/organizer/competitions/${competitionId}?payment=cancelled`,
   });
 
   if (!session.url) {

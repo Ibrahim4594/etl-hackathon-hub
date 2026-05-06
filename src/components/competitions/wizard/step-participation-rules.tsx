@@ -69,11 +69,17 @@ export function StepParticipationRules() {
               onChange={(e) => {
                 if (e.target.value === "") { updateFormData({ minTeamSize: 0 }); return; }
                 const raw = parseInt(e.target.value);
-                if (!isNaN(raw)) updateFormData({ minTeamSize: raw, ...(raw > 1 ? { allowSoloParticipation: false } : {}) });
+                if (!isNaN(raw)) updateFormData({
+                  minTeamSize: raw,
+                  ...(raw > 1 ? { allowSoloParticipation: false } : { allowSoloParticipation: true }),
+                });
               }}
               onBlur={() => {
                 const val = Math.max(1, Math.min(10, formData.minTeamSize || 1));
-                updateFormData({ minTeamSize: val, ...(val > 1 ? { allowSoloParticipation: false } : {}) });
+                updateFormData({
+                  minTeamSize: val,
+                  ...(val > 1 ? { allowSoloParticipation: false } : { allowSoloParticipation: true }),
+                });
                 revalidateIfAttempted();
               }}
             />

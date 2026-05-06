@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
-import { competitions, submissions, teams, users, teamMembers } from "@/lib/db/schema";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { competitions, submissions, teams } from "@/lib/db/schema";
+import { eq, and, sql } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -33,17 +33,20 @@ export default async function LeaderboardPage({ params }: Props) {
 
   if (!result) notFound();
 
-  // Only show leaderboard after judging starts
-  const isVisible =
-    result.status === "judging" || result.status === "completed";
+  // Show leaderboard for any competition with at least one scored submission.
+  // Hide only for drafts/pending review where no scoring has happened.
+  const isVisibleStatus =
+    result.status === "active" ||
+    result.status === "judging" ||
+    result.status === "completed";
 
-  if (!isVisible) {
+  if (!isVisibleStatus) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 text-center">
         <Trophy className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
         <h1 className="text-2xl font-bold">Leaderboard Not Available Yet</h1>
         <p className="mt-2 text-muted-foreground">
-          The leaderboard will appear once judging begins for this competition.
+          The leaderboard will appear once the competition goes live.
         </p>
         <Link href={`/competitions/${slug}`}>
           <Button variant="outline" className="mt-6 gap-1.5 rounded-full">
@@ -55,13 +58,17 @@ export default async function LeaderboardPage({ params }: Props) {
     );
   }
 
+  // For completed competitions: show every valid submission so nothing is
+  // invisible — even un-scored ones appear with "Pending".
+  // For active/judging: only show submissions that have at least one score.
+  const isCompleted = result.status === "completed";
+
   const ranked = await db
     .select({
       submissionId: submissions.id,
       title: submissions.title,
       status: submissions.status,
       finalScore: submissions.finalScore,
-      aiScore: submissions.aiScore,
       humanScore: submissions.humanScore,
       rank: submissions.rank,
       teamName: teams.name,
@@ -71,10 +78,19 @@ export default async function LeaderboardPage({ params }: Props) {
     .where(
       and(
         eq(submissions.competitionId, result.id),
-        sql`${submissions.status} NOT IN ('submitted', 'validating', 'invalid')`
+        sql`${submissions.status} NOT IN ('validating', 'invalid', 'submitted')`,
+        isCompleted
+          ? undefined // show all valid submissions when done
+          : sql`(
+              ${submissions.finalScore} IS NOT NULL OR
+              ${submissions.humanScore} IS NOT NULL OR
+              ${submissions.status} IN ('finalist', 'winner', 'judged')
+            )`
       )
     )
-    .orderBy(desc(submissions.finalScore));
+    .orderBy(
+      sql`COALESCE(${submissions.finalScore}, ${submissions.humanScore}, 0) DESC`
+    );
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
@@ -151,9 +167,9 @@ export default async function LeaderboardPage({ params }: Props) {
                       <p className="text-lg font-black text-primary">
                         {entry.finalScore.toFixed(1)}
                       </p>
-                    ) : entry.aiScore !== null ? (
+                    ) : entry.humanScore !== null ? (
                       <p className="text-lg font-bold text-muted-foreground">
-                        {entry.aiScore.toFixed(1)}
+                        {Number(entry.humanScore).toFixed(1)}
                       </p>
                     ) : (
                       <p className="text-sm text-muted-foreground">Pending</p>

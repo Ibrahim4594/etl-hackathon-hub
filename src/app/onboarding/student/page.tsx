@@ -55,7 +55,13 @@ export default function StudentOnboardingPage() {
     defaultValues: {
       firstName: user?.firstName ?? "",
       lastName: user?.lastName ?? "",
+      university: "",
+      yearOfStudy: "",
+      whatsapp: "",
       skills: [],
+      bio: "",
+      githubUrl: "",
+      linkedinUrl: "",
     },
   });
 
@@ -135,7 +141,7 @@ export default function StudentOnboardingPage() {
                 <Label htmlFor="yearOfStudy">Year of Study</Label>
                 <Select
                   value={watch("yearOfStudy") ?? ""}
-                  onValueChange={(val) => val && setValue("yearOfStudy", val, { shouldValidate: true })}>
+                  onValueChange={(val) => setValue("yearOfStudy", val ?? "", { shouldValidate: true })}>
                   <SelectTrigger className="rounded-xl h-10">
                     <SelectValue placeholder="Select year" />
                   </SelectTrigger>

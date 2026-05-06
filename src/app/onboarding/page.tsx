@@ -56,7 +56,8 @@ export default function OnboardingPage() {
     if (!isLoaded || !user) return;
     const meta = user.publicMetadata as { role?: string; onboardingComplete?: boolean };
     if (meta.role && meta.onboardingComplete) {
-      window.location.href = `/${meta.role}/dashboard`;
+      const segment = meta.role === "sponsor" ? "organizer" : meta.role;
+      window.location.href = `/${segment}/dashboard`;
     }
   }, [isLoaded, user]);
 

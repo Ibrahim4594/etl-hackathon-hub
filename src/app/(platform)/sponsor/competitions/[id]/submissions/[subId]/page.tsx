@@ -73,7 +73,7 @@ export default async function SponsorSubmissionDetailPage({
 
   if (!competition) notFound();
   if (dbUser.role === "sponsor" && competition.createdBy !== dbUser.id) {
-    redirect("/sponsor/competitions");
+    redirect("/organizer/competitions");
   }
 
   // Fetch submission with team info
@@ -129,7 +129,7 @@ export default async function SponsorSubmissionDetailPage({
   return (
     <div className="space-y-8">
       <div className="flex items-center gap-3">
-        <Link href={`/sponsor/competitions/${competitionId}/submissions`}>
+        <Link href={`/organizer/competitions/${competitionId}/submissions`}>
           <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="Go back">
             <ArrowLeft className="h-4 w-4" />
           </Button>

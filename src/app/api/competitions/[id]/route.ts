@@ -1,5 +1,6 @@
 import { serverAuth } from "@/lib/auth/server-auth";
 import { db } from "@/lib/db";
+import { autoAdvanceCompetitionStatus } from "@/lib/services/competition-status";
 import { competitions, organizations, users, competitionSponsors } from "@/lib/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { NextResponse } from "next/server";
@@ -160,6 +161,17 @@ export async function GET(
     }
   }
 
+  // Lazily advance status when deadlines have passed (no cron needed)
+  const liveStatus = await autoAdvanceCompetitionStatus({
+    id: competition.id,
+    status: competition.status,
+    submissionEnd: competition.submissionEnd,
+    judgingEnd: competition.judgingEnd,
+  });
+  if (liveStatus !== competition.status) {
+    competition.status = liveStatus as typeof competition.status;
+  }
+
   const sponsors = await db
     .select()
     .from(competitionSponsors)
@@ -265,6 +277,15 @@ export async function PATCH(
       { status: 400 }
     );
   }
+
+  // Defensive cleanup: drop empty custom-field rows so they don't trigger validation
+  if (rawBody && typeof rawBody === "object" && Array.isArray((rawBody as { customSubmissionFields?: unknown }).customSubmissionFields)) {
+    (rawBody as { customSubmissionFields: { label?: string }[] }).customSubmissionFields =
+      (rawBody as { customSubmissionFields: { label?: string }[] }).customSubmissionFields.filter(
+        (f) => f && typeof f.label === "string" && f.label.trim()
+      );
+  }
+
   const parsed = competitionUpdateSchema.safeParse(rawBody);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid request body", issues: parsed.error.issues }, { status: 400 });

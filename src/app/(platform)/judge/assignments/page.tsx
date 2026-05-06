@@ -44,6 +44,7 @@ export default async function JudgeAssignmentsPage() {
       competitionTitle: competitions.title,
       competitionSlug: competitions.slug,
       competitionStatus: competitions.status,
+      submissionEnd: competitions.submissionEnd,
       orgName: organizations.name,
       orgLogoUrl: organizations.logoUrl,
     })
@@ -82,11 +83,21 @@ export default async function JudgeAssignmentsPage() {
     for (const e of evaluatedCounts) evaluatedCountMap.set(e.competitionId, Number(e.value));
   }
 
+  const now = new Date();
   const assignmentsWithCounts = assignments.map((assignment) => {
     const total = submissionCountMap.get(assignment.competitionId) ?? 0;
     const evaluated = evaluatedCountMap.get(assignment.competitionId) ?? 0;
+    // Once the submission deadline passes, an "active" comp should display
+    // as "ended" so judges don't think participants can still submit.
+    const submissionPassed =
+      assignment.submissionEnd && new Date(assignment.submissionEnd) < now;
+    const effectiveStatus =
+      assignment.competitionStatus === "active" && submissionPassed
+        ? "ended"
+        : assignment.competitionStatus;
     return {
       ...assignment,
+      effectiveStatus,
       submissionCount: total,
       evaluatedCount: evaluated,
       progress: total > 0 ? Math.round((evaluated / total) * 100) : 0,
@@ -98,6 +109,7 @@ export default async function JudgeAssignmentsPage() {
     judging: "secondary",
     completed: "outline",
     cancelled: "destructive",
+    ended: "outline",
   };
 
   return (
@@ -128,8 +140,8 @@ export default async function JudgeAssignmentsPage() {
                       <span className="truncate">{assignment.orgName}</span>
                     </CardDescription>
                   </div>
-                  <Badge variant={statusColors[assignment.competitionStatus] ?? "outline"}>
-                    {assignment.competitionStatus}
+                  <Badge variant={statusColors[assignment.effectiveStatus] ?? "outline"}>
+                    {assignment.effectiveStatus}
                   </Badge>
                 </div>
               </CardHeader>

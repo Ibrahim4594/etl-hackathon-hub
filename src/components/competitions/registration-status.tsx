@@ -22,6 +22,10 @@ import {
   BarChart3,
   Zap,
   KeyRound,
+  LogOut,
+  UserPlus,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -83,13 +87,22 @@ export function RegistrationStatus({
   const [showAccessCodeInput, setShowAccessCodeInput] = useState(false);
   const isPrivate = visibility === "private";
 
+  // Join-team state
+  const [showJoinTeam, setShowJoinTeam] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+  const [joinLoading, setJoinLoading] = useState(false);
+
+  // Unregister state
+  const [unregLoading, setUnregLoading] = useState(false);
+
   const now = new Date();
   const regStart = registrationStart ? new Date(registrationStart) : null;
   const regClosed = registrationEnd && new Date(registrationEnd) < now;
   const subClosed = submissionEnd && new Date(submissionEnd) < now;
-  const isActive = competitionStatus === "active";
-  const isApprovedAndOpen = competitionStatus === "approved" && regStart !== null && now >= regStart;
-  const canRegister = isActive || isApprovedAndOpen;
+  const blockedStatuses = ["draft", "pending_review", "completed", "cancelled"];
+  const isStatusOpen = !blockedStatuses.includes(competitionStatus);
+  const isWindowOpen = !regStart || now >= regStart;
+  const canRegister = isStatusOpen && isWindowOpen;
   const isJudging = competitionStatus === "judging";
   const isCompleted = competitionStatus === "completed";
 
@@ -135,6 +148,45 @@ export function RegistrationStatus({
     if (regData?.inviteCode) {
       navigator.clipboard.writeText(regData.inviteCode);
       toast.success("Invite code copied!");
+    }
+  };
+
+  const handleJoinTeam = async () => {
+    if (!joinCode.trim()) return;
+    setJoinLoading(true);
+    try {
+      const res = await fetch("/api/teams/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inviteCode: joinCode.trim().toUpperCase() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to join team");
+      toast.success("Joined team successfully!");
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to join team");
+    } finally {
+      setJoinLoading(false);
+    }
+  };
+
+  const handleUnregister = async () => {
+    if (!regData) return;
+    setUnregLoading(true);
+    try {
+      const res = await fetch(`/api/competitions/${competitionId}/unregister`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to leave competition");
+      toast.success("You have left the competition.");
+      setRegData(null);
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to leave competition");
+    } finally {
+      setUnregLoading(false);
     }
   };
 
@@ -237,8 +289,43 @@ export function RegistrationStatus({
           ) : (
             <Rocket className="mr-2 h-4 w-4" />
           )}
-          {isPrivate && !showAccessCodeInput ? "Enter Access Code" : "Register Now"}
+          {isPrivate && !showAccessCodeInput ? "Enter Access Code" : "Register as Team Lead"}
         </Button>
+
+        {/* Join existing team with invite code */}
+        <div className="rounded-lg border border-border/50 bg-muted/20 p-3">
+          <button
+            type="button"
+            onClick={() => setShowJoinTeam((v) => !v)}
+            className="flex w-full items-center justify-between text-sm font-medium"
+          >
+            <span className="flex items-center gap-1.5">
+              <UserPlus className="h-4 w-4 text-primary" />
+              Have an invite code? Join a team
+            </span>
+            {showJoinTeam ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+          </button>
+          {showJoinTeam && (
+            <div className="mt-3 space-y-2">
+              <Input
+                placeholder="Enter invite code (e.g. A1B2C3D4)"
+                value={joinCode}
+                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                maxLength={8}
+                className="font-mono uppercase"
+              />
+              <Button
+                onClick={handleJoinTeam}
+                disabled={joinLoading || joinCode.length < 6}
+                className="w-full"
+                size="sm"
+              >
+                {joinLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
+                Join Team
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
     );
   }
@@ -335,6 +422,19 @@ export function RegistrationStatus({
               </Button>
             </Link>
           </div>
+        )}
+
+        {/* Leave competition */}
+        {!submission && (
+          <button
+            type="button"
+            onClick={handleUnregister}
+            disabled={unregLoading}
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
+          >
+            {unregLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LogOut className="h-3.5 w-3.5" />}
+            Leave Competition
+          </button>
         )}
       </div>
     );

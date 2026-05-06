@@ -5,7 +5,6 @@ import {
   submissions,
   teams,
   competitions,
-  aiEvaluations,
   judgeAssignments,
   judgeEvaluations,
 } from "@/lib/db/schema";
@@ -16,7 +15,6 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SubmissionDetailPanel } from "@/components/judge/submission-detail-panel";
-import { AiSummaryCard } from "@/components/judge/ai-summary-card";
 import { ScoringPanel } from "@/components/judge/scoring-panel";
 import { ArrowLeft } from "lucide-react";
 
@@ -100,12 +98,6 @@ export default async function EvaluateSubmissionPage({
 
   const judgingCriteria = (compData?.judgingCriteria as { name: string; description: string; weight: number; maxScore: number }[] | null) ?? [];
 
-  // Fetch AI evaluation data
-  const [aiEvaluation] = await db
-    .select()
-    .from(aiEvaluations)
-    .where(eq(aiEvaluations.submissionId, submissionId));
-
   // Fetch existing judge evaluation (if editing)
   const [existingEvaluation] = await db
     .select()
@@ -169,23 +161,8 @@ export default async function EvaluateSubmissionPage({
           />
         </div>
 
-        {/* Right column: AI Summary + Human Scoring */}
+        {/* Right column: Human Scoring */}
         <div className="space-y-6 lg:col-span-2">
-          {/* AI Summary Card */}
-          <AiSummaryCard
-            summary={aiEvaluation?.summary ?? null}
-            scores={
-              (aiEvaluation?.scores as {
-                innovation: number;
-                technical: number;
-                impact: number;
-                design: number;
-              } | null) ?? null
-            }
-            compositeScore={aiEvaluation?.compositeScore ?? null}
-            flags={(aiEvaluation?.flags as string[] | null) ?? null}
-            modelUsed={aiEvaluation?.modelUsed ?? null}
-          />
 
           {/* Human Scoring Panel */}
           <ScoringPanel
@@ -195,7 +172,6 @@ export default async function EvaluateSubmissionPage({
               (existingEvaluation?.scores as Record<string, number> | null) ?? null
             }
             existingComments={existingEvaluation?.comments ?? null}
-            existingOverrideAi={existingEvaluation?.overrideAi ?? false}
           />
         </div>
       </div>

@@ -69,7 +69,7 @@ export async function PATCH(req: Request) {
             type: "general",
             title: "Organization Verified",
             message: `Your organization "${org.name}" has been verified! You can now publish competitions.`,
-            link: "/sponsor/dashboard",
+            link: "/organizer/dashboard",
           });
         } else if (verification === "rejected") {
           await createNotification({
@@ -77,7 +77,7 @@ export async function PATCH(req: Request) {
             type: "general",
             title: "Organization Rejected",
             message: `Your organization "${org.name}" was not approved.${rejectionReason ? ` Reason: ${rejectionReason}` : ""} Please update your details and try again.`,
-            link: "/sponsor/dashboard",
+            link: "/organizer/dashboard",
           });
         }
       }

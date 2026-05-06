@@ -118,6 +118,7 @@ export default async function SponsorOrganizationPage() {
               contactEmail: org.contactEmail,
               contactPhone: org.contactPhone,
               contactPersonName: org.contactPersonName,
+              logoUrl: org.logoUrl,
             }}
           />
         </div>

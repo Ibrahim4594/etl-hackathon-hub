@@ -27,7 +27,6 @@ interface ScoringPanelProps {
   criteria?: CriterionConfig[];
   existingScores?: Record<string, number> | null;
   existingComments?: string | null;
-  existingOverrideAi?: boolean;
 }
 
 const DEFAULT_CRITERIA: CriterionConfig[] = [
@@ -57,13 +56,11 @@ export function ScoringPanel({
   criteria,
   existingScores,
   existingComments,
-  existingOverrideAi,
 }: ScoringPanelProps) {
   const router = useRouter();
   const activeCriteria = criteria && criteria.length > 0 ? criteria : DEFAULT_CRITERIA;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [comments, setComments] = useState(existingComments ?? "");
-  const [overrideAi, setOverrideAi] = useState(existingOverrideAi ?? false);
   const [scores, setScores] = useState<Record<string, number>>(() => {
     const init: Record<string, number> = {};
     for (const c of activeCriteria) {
@@ -96,7 +93,6 @@ export function ScoringPanel({
           submissionId,
           scores,
           comments,
-          overrideAi,
         }),
       });
 
@@ -202,22 +198,6 @@ export function ScoringPanel({
               className="rounded-xl"
             />
           </div>
-
-          {/* Override AI */}
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={overrideAi}
-              onChange={(e) => setOverrideAi(e.target.checked)}
-              className="mt-1 h-4 w-4 rounded border-input accent-primary"
-            />
-            <div>
-              <span className="text-sm font-medium">Override AI Evaluation</span>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Check if you disagree with the AI scores and want your evaluation to take priority.
-              </p>
-            </div>
-          </label>
 
           <Button
             type="submit"

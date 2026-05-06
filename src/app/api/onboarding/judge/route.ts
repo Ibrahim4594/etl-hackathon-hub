@@ -117,7 +117,7 @@ export async function POST(req: Request) {
               type: "general",
               title: "Judge Accepted Invitation",
               message: `${dbUser.firstName || "A judge"} has accepted your invitation and joined as a judge.`,
-              link: `/sponsor/competitions/${invite.competitionId}`,
+              link: `/organizer/competitions/${invite.competitionId}`,
             });
           }
         } catch {

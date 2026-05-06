@@ -129,7 +129,7 @@ export async function POST(req: Request) {
             type: "general",
             title: "Judge Accepted",
             message: `${name.trim()} has been assigned to judge "${competition.title}".`,
-            link: `/sponsor/competitions/${competitionId}`,
+            link: `/organizer/competitions/${competitionId}`,
           });
         }
 

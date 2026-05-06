@@ -94,7 +94,7 @@ export async function PATCH(req: Request) {
             type: "competition_approved",
             title: "Competition Approved!",
             message: `Your competition "${competition.title}" has been approved! You can now publish it live.`,
-            link: `/sponsor/competitions/${competition.id}`,
+            link: `/organizer/competitions/${competition.id}`,
           });
         }
       } else {
@@ -109,7 +109,7 @@ export async function PATCH(req: Request) {
             type: "competition_rejected",
             title: "Competition Rejected",
             message: rejectMsg,
-            link: `/sponsor/competitions/${competition.id}`,
+            link: `/organizer/competitions/${competition.id}`,
           });
         }
       }
