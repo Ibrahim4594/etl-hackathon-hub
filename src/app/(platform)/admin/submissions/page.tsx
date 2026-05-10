@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { db } from "@/lib/db";
 import { submissions, teams, competitions } from "@/lib/db/schema";
-import { eq, desc, count } from "drizzle-orm";
+import { eq, desc, count, and } from "drizzle-orm";
 import { resolveOnboardingUser } from "@/lib/auth/resolve-onboarding-user";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -46,7 +46,7 @@ const statusVariant: Record<string, "default" | "secondary" | "outline" | "destr
 const PAGE_SIZE = 50;
 
 interface PageProps {
-  searchParams: Promise<{ status?: string; page?: string }>;
+  searchParams: Promise<{ status?: string; page?: string; competitionId?: string }>;
 }
 
 export default async function AdminSubmissionsPage({ searchParams }: PageProps) {
@@ -59,15 +59,20 @@ export default async function AdminSubmissionsPage({ searchParams }: PageProps) 
     redirect(dbUser.role ? `/${dbUser.role}/dashboard` : "/onboarding");
   }
 
-  const { status: filterStatus, page: pageParam } = await searchParams;
+  const { status: filterStatus, page: pageParam, competitionId: filterComp } = await searchParams;
   const activeFilter = filterStatus || "all";
+  const activeCompFilter = filterComp || "all";
   const parsed = parseInt(pageParam || "1", 10);
   const currentPage = Math.max(1, Number.isNaN(parsed) ? 1 : parsed);
 
   const offset = (currentPage - 1) * PAGE_SIZE;
-  const statusWhere = activeFilter !== "all" ? eq(submissions.status, activeFilter as "submitted" | "validating" | "valid" | "invalid" | "flagged" | "ai_evaluated" | "judged" | "finalist" | "winner") : undefined;
+  const statusCond = activeFilter !== "all" ? eq(submissions.status, activeFilter as "submitted" | "validating" | "valid" | "invalid" | "flagged" | "ai_evaluated" | "judged" | "finalist" | "winner") : undefined;
+  const compCond = activeCompFilter !== "all" ? eq(submissions.competitionId, activeCompFilter) : undefined;
+  const whereCond = and(statusCond, compCond);
 
-  const [statusCountRows, paginatedSubmissions] = await Promise.all([
+  // Total count for pagination footer (respects all filters).
+  // List of competitions for dropdown.
+  const [statusCountRows, paginatedSubmissions, totalRows, competitionsList] = await Promise.all([
     db
       .select({ status: submissions.status, cnt: count() })
       .from(submissions)
@@ -91,10 +96,15 @@ export default async function AdminSubmissionsPage({ searchParams }: PageProps) 
       .from(submissions)
       .innerJoin(teams, eq(submissions.teamId, teams.id))
       .innerJoin(competitions, eq(submissions.competitionId, competitions.id))
-      .where(statusWhere)
+      .where(whereCond)
       .orderBy(desc(submissions.createdAt))
       .limit(PAGE_SIZE)
       .offset(offset),
+    db.select({ total: count() }).from(submissions).where(whereCond),
+    db
+      .select({ id: competitions.id, title: competitions.title })
+      .from(competitions)
+      .orderBy(desc(competitions.createdAt)),
   ]);
 
   const counts: Record<string, number> = {};
@@ -107,7 +117,8 @@ export default async function AdminSubmissionsPage({ searchParams }: PageProps) 
   const validCount = counts["valid"] ?? 0;
   const flaggedCount = counts["flagged"] ?? 0;
   const invalidCount = counts["invalid"] ?? 0;
-  const filteredCount = activeFilter === "all" ? totalCount : (counts[activeFilter] ?? 0);
+  // True filtered total (status × competition) from DB count query
+  const filteredCount = Number(totalRows[0]?.total ?? 0);
   const totalPages = Math.max(1, Math.ceil(filteredCount / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
 
@@ -134,6 +145,41 @@ export default async function AdminSubmissionsPage({ searchParams }: PageProps) 
         <SubmissionStatusFilter currentStatus={activeFilter} counts={counts} />
       </Suspense>
 
+      {/* Competition filter dropdown */}
+      <form className="flex items-center gap-2" action="" method="get">
+        {activeFilter !== "all" && <input type="hidden" name="status" value={activeFilter} />}
+        <label htmlFor="competitionId" className="text-sm font-medium text-muted-foreground">
+          Competition:
+        </label>
+        <select
+          id="competitionId"
+          name="competitionId"
+          defaultValue={activeCompFilter}
+          className="rounded-md border bg-background px-3 py-1.5 text-sm"
+        >
+          <option value="all">All competitions</option>
+          {competitionsList.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.title}
+            </option>
+          ))}
+        </select>
+        <button
+          type="submit"
+          className="rounded-md border bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
+        >
+          Apply
+        </button>
+        {activeCompFilter !== "all" && (
+          <Link
+            href={`?${new URLSearchParams(activeFilter !== "all" ? { status: activeFilter } : {}).toString()}`}
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            Clear
+          </Link>
+        )}
+      </form>
+
       {filteredCount === 0 ? (
         <EmptyState
           icon={FileText}
@@ -153,8 +199,7 @@ export default async function AdminSubmissionsPage({ searchParams }: PageProps) 
                 <TableHead>Team</TableHead>
                 <TableHead>Competition</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>AI Score</TableHead>
-                <TableHead>Final Score</TableHead>
+                <TableHead>Score</TableHead>
                 <TableHead>Submitted At</TableHead>
               </TableRow>
             </TableHeader>
@@ -183,8 +228,7 @@ export default async function AdminSubmissionsPage({ searchParams }: PageProps) 
                       {getSubmissionStatusLabel(sub.status)}
                     </Badge>
                   </TableCell>
-                  <TableCell>{formatScore(sub.aiScore)}</TableCell>
-                  <TableCell>{formatScore(sub.finalScore)}</TableCell>
+                  <TableCell>{formatScore(sub.finalScore ?? sub.humanScore)}</TableCell>
                   <TableCell>{formatDate(sub.createdAt)}</TableCell>
                 </TableRow>
               ))}
@@ -207,6 +251,7 @@ export default async function AdminSubmissionsPage({ searchParams }: PageProps) 
                 <Link
                   href={`?${new URLSearchParams({
                     ...(activeFilter !== "all" ? { status: activeFilter } : {}),
+                    ...(activeCompFilter !== "all" ? { competitionId: activeCompFilter } : {}),
                     page: String(safePage - 1),
                   }).toString()}`}
                   className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted"
@@ -221,6 +266,7 @@ export default async function AdminSubmissionsPage({ searchParams }: PageProps) 
                 <Link
                   href={`?${new URLSearchParams({
                     ...(activeFilter !== "all" ? { status: activeFilter } : {}),
+                    ...(activeCompFilter !== "all" ? { competitionId: activeCompFilter } : {}),
                     page: String(safePage + 1),
                   }).toString()}`}
                   className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted"

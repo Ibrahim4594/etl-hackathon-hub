@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/table";
 import { Building2 } from "lucide-react";
 import { AdminOrgActions } from "./actions";
+import { OrgDetailsDialog } from "./org-details-dialog";
 
 const verificationVariant: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
   pending: "outline",
@@ -54,10 +55,13 @@ export default async function AdminOrganizationsPage() {
       slug: organizations.slug,
       website: organizations.website,
       industry: organizations.industry,
+      description: organizations.description,
       contactEmail: organizations.contactEmail,
       contactPersonName: organizations.contactPersonName,
+      contactPhone: organizations.contactPhone,
       verification: organizations.verification,
       rejectionReason: organizations.rejectionReason,
+      logoUrl: organizations.logoUrl,
       createdAt: organizations.createdAt,
       ownerFirstName: users.firstName,
       ownerLastName: users.lastName,
@@ -125,10 +129,13 @@ export default async function AdminOrganizationsPage() {
                   </TableCell>
                   <TableCell>{formatDate(org.createdAt)}</TableCell>
                   <TableCell className="text-right">
-                    <AdminOrgActions
-                      organizationId={org.id}
-                      currentStatus={org.verification}
-                    />
+                    <div className="flex items-center justify-end gap-1">
+                      <OrgDetailsDialog org={org} />
+                      <AdminOrgActions
+                        organizationId={org.id}
+                        currentStatus={org.verification}
+                      />
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

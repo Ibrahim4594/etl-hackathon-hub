@@ -23,6 +23,26 @@ const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
 export default clerkMiddleware(async (auth, req) => {
   const { userId, sessionClaims } = await auth();
 
+  // Authenticated user landing on home — redirect to dashboard or onboarding.
+  // Avoids confusion of Clerk dropping users back to marketing page after sign-in/up.
+  if (userId && req.nextUrl.pathname === "/") {
+    let role = (sessionClaims?.metadata as { role?: string })?.role;
+    let onboardingComplete = (sessionClaims?.metadata as { onboardingComplete?: boolean })?.onboardingComplete;
+    if (role === undefined) {
+      try {
+        const client = await clerkClient();
+        const user = await client.users.getUser(userId);
+        role = (user.publicMetadata as { role?: string })?.role;
+        onboardingComplete = (user.publicMetadata as { onboardingComplete?: boolean })?.onboardingComplete;
+      } catch {}
+    }
+    if (!role || !onboardingComplete) {
+      return NextResponse.redirect(new URL("/onboarding", req.url));
+    }
+    const seg = role === "sponsor" ? "organizer" : role;
+    return NextResponse.redirect(new URL(`/${seg}/dashboard`, req.url));
+  }
+
   // Allow public routes through
   if (isPublicRoute(req)) {
     return NextResponse.next();

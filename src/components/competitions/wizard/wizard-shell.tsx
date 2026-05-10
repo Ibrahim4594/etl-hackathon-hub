@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useCompetitionForm, WIZARD_STEPS, STEP_TITLES } from "@/hooks/use-competition-form";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -12,6 +13,9 @@ interface WizardShellProps {
 
 export function WizardShell({ children }: WizardShellProps) {
   const { currentStep, setStep, validateStep, stepErrors } = useCompetitionForm();
+  const searchParams = useSearchParams();
+  // When editing existing competition, all steps are jumpable (data preloaded).
+  const isEditing = !!searchParams.get("edit");
   const totalSteps = WIZARD_STEPS.length;
   const isFirstStep = currentStep === 0;
   const isLastStep = currentStep === totalSteps - 1;
@@ -24,16 +28,17 @@ export function WizardShell({ children }: WizardShellProps) {
           {WIZARD_STEPS.map((step, index) => {
             const isCompleted = index < currentStep;
             const isCurrent = index === currentStep;
+            const isClickable = isEditing || index < currentStep;
 
             return (
               <div key={step} className="flex flex-1 items-center">
                 <button
                   type="button"
-                  onClick={() => index < currentStep && setStep(index)}
-                  disabled={index > currentStep}
+                  onClick={() => isClickable && setStep(index)}
+                  disabled={!isClickable && !isCurrent}
                   className={cn(
                     "flex flex-col items-center gap-1.5 group",
-                    index < currentStep ? "cursor-pointer" : "cursor-default"
+                    isClickable ? "cursor-pointer" : "cursor-default"
                   )}
                 >
                   <div

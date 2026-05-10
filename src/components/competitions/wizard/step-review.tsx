@@ -57,12 +57,15 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 export function StepReview() {
-  const { formData, reset } = useCompetitionForm();
+  const { formData, reset, setStep } = useCompetitionForm();
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("edit");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [issueGroups, setIssueGroups] = useState<
+    Array<{ stepIdx: number; stepLabel: string; messages: string[] }>
+  >([]);
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
   const formatDate = (dateStr?: string) => {
@@ -91,9 +94,80 @@ export function StepReview() {
     }).format(amount);
   };
 
+  // Map root field name → wizard step index + friendly step label.
+  // Used to group validation errors and offer "Jump to step" buttons.
+  const fieldToStep: Record<string, { idx: number; label: string }> = {
+    title: { idx: 0, label: "Basic Info" },
+    tagline: { idx: 0, label: "Basic Info" },
+    description: { idx: 0, label: "Basic Info" },
+    category: { idx: 0, label: "Basic Info" },
+    tags: { idx: 0, label: "Basic Info" },
+    challengeStatement: { idx: 1, label: "Challenge Details" },
+    requirements: { idx: 1, label: "Challenge Details" },
+    resources: { idx: 1, label: "Challenge Details" },
+    minTeamSize: { idx: 2, label: "Participation Rules" },
+    maxTeamSize: { idx: 2, label: "Participation Rules" },
+    maxParticipants: { idx: 2, label: "Participation Rules" },
+    allowSoloParticipation: { idx: 2, label: "Participation Rules" },
+    eligibilityCriteria: { idx: 2, label: "Participation Rules" },
+    targetParticipants: { idx: 2, label: "Participation Rules" },
+    submissionRequirements: { idx: 3, label: "Submission Requirements" },
+    customSubmissionFields: { idx: 3, label: "Submission Requirements" },
+    registrationStart: { idx: 4, label: "Timeline" },
+    registrationEnd: { idx: 4, label: "Timeline" },
+    submissionStart: { idx: 4, label: "Timeline" },
+    submissionEnd: { idx: 4, label: "Timeline" },
+    judgingStart: { idx: 4, label: "Timeline" },
+    judgingEnd: { idx: 4, label: "Timeline" },
+    resultsDate: { idx: 4, label: "Timeline" },
+    prizes: { idx: 5, label: "Prizes" },
+    totalPrizePool: { idx: 5, label: "Prizes" },
+    prizeConfirmed: { idx: 5, label: "Prizes" },
+    sponsors: { idx: 6, label: "Sponsors" },
+    finalistCount: { idx: 7, label: "Judging Config" },
+    judgingCriteria: { idx: 7, label: "Judging Config" },
+    coverImageUrl: { idx: 8, label: "Media" },
+    logoUrl: { idx: 8, label: "Media" },
+  };
+
+  const friendlyFieldLabel: Record<string, string> = {
+    title: "Title",
+    tagline: "Tagline",
+    description: "Description",
+    category: "Category",
+    tags: "Tags",
+    challengeStatement: "Challenge statement",
+    requirements: "Requirements",
+    resources: "Resources",
+    minTeamSize: "Min team size",
+    maxTeamSize: "Max team size",
+    maxParticipants: "Max participants",
+    allowSoloParticipation: "Solo participation",
+    eligibilityCriteria: "Eligibility criteria",
+    targetParticipants: "Target participants",
+    submissionRequirements: "Submission requirements",
+    customSubmissionFields: "Custom submission fields",
+    registrationStart: "Registration start",
+    registrationEnd: "Registration end",
+    submissionStart: "Submission start",
+    submissionEnd: "Submission deadline",
+    judgingStart: "Judging start",
+    judgingEnd: "Judging end",
+    resultsDate: "Results date",
+    prizes: "Prizes",
+    totalPrizePool: "Total prize pool",
+    prizeConfirmed: "Prize confirmation",
+    sponsors: "Sponsors",
+    finalistCount: "Finalist count",
+    judgingCriteria: "Judging criteria",
+    coverImageUrl: "Cover image",
+    logoUrl: "Logo",
+  };
+
   const handleSubmit = async () => {
     setIsSubmitting(true);
     setSubmitError(null);
+    setIssueGroups([]);
 
     try {
       // Strip empty custom submission fields (user added rows but left labels blank)
@@ -127,33 +201,41 @@ export function StepReview() {
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        // Convert raw zod issues into a user-centric, friendly message
+        // Convert raw zod issues into grouped, jumpable errors per wizard step.
         if (data.issues && Array.isArray(data.issues)) {
-          const friendly = (data.issues as { path?: (string | number)[]; message?: string }[])
-            .map((issue) => {
-              const fieldPath = (issue.path ?? []).join(".");
-              const friendlyField = fieldPath
-                .replace(/customSubmissionFields\.\d+\.label/, "Custom field label")
-                .replace(/customSubmissionFields/, "Custom fields")
-                .replace(/registrationStart/, "Registration start")
-                .replace(/registrationEnd/, "Registration end")
-                .replace(/submissionStart/, "Submission start")
-                .replace(/submissionEnd/, "Submission deadline")
-                .replace(/judgingStart/, "Judging start")
-                .replace(/judgingEnd/, "Judging end")
-                .replace(/resultsDate/, "Results date")
-                .replace(/aiJudgingWeight|humanJudgingWeight/, "Judging weights")
-                .replace(/maxTeamSize/, "Max team size")
-                .replace(/minTeamSize/, "Min team size")
-                .replace(/finalistCount/, "Finalist count")
-                .replace(/maxParticipants/, "Max participants")
-                .replace(/^\w/, (c) => c.toUpperCase());
-              return friendlyField
-                ? `${friendlyField}: ${issue.message || "Invalid value"}`
-                : (issue.message || "Invalid value");
-            })
-            .filter(Boolean);
-          throw new Error(friendly.join("\n"));
+          const issues = data.issues as { path?: (string | number)[]; message?: string }[];
+          const grouped = new Map<number, { stepIdx: number; stepLabel: string; messages: string[] }>();
+          const ungrouped: string[] = [];
+
+          for (const issue of issues) {
+            const rootField = String(issue.path?.[0] ?? "");
+            const stepInfo = fieldToStep[rootField];
+            const fieldLabel = friendlyFieldLabel[rootField] ?? rootField;
+            const msg = `${fieldLabel}: ${issue.message || "Invalid value"}`;
+
+            if (stepInfo) {
+              const existing = grouped.get(stepInfo.idx);
+              if (existing) {
+                existing.messages.push(msg);
+              } else {
+                grouped.set(stepInfo.idx, {
+                  stepIdx: stepInfo.idx,
+                  stepLabel: stepInfo.label,
+                  messages: [msg],
+                });
+              }
+            } else {
+              ungrouped.push(msg);
+            }
+          }
+
+          const groupsArr = Array.from(grouped.values()).sort((a, b) => a.stepIdx - b.stepIdx);
+          if (ungrouped.length > 0) {
+            groupsArr.push({ stepIdx: -1, stepLabel: "General", messages: ungrouped });
+          }
+
+          setIssueGroups(groupsArr);
+          throw new Error("Some fields need attention. Click a step below to fix.");
         }
         throw new Error(data.error || "Something went wrong. Please review your details and try again.");
       }
@@ -480,10 +562,54 @@ export function StepReview() {
             </div>
           )}
 
-          {submitError && (
+          {submitError && issueGroups.length === 0 && (
             <div className="mb-4 flex items-start gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
               <AlertCircle className="size-4 shrink-0 mt-0.5" />
               <pre className="whitespace-pre-wrap font-sans">{submitError}</pre>
+            </div>
+          )}
+
+          {issueGroups.length > 0 && (
+            <div className="mb-4 space-y-3 rounded-lg border border-destructive/50 bg-destructive/5 p-4">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="size-5 shrink-0 mt-0.5 text-destructive" />
+                <div>
+                  <p className="text-sm font-semibold text-destructive">
+                    Some fields need attention
+                  </p>
+                  <p className="mt-0.5 text-xs text-destructive/80">
+                    Click a step to jump there and fix the issue.
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {issueGroups.map((g) => (
+                  <div
+                    key={g.stepIdx}
+                    className="rounded-md border border-destructive/30 bg-background/50 p-3"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-medium">{g.stepLabel}</p>
+                      {g.stepIdx >= 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setStep(g.stepIdx)}
+                          className="text-xs font-medium text-primary hover:underline"
+                        >
+                          Fix in {g.stepLabel} →
+                        </button>
+                      )}
+                    </div>
+                    <ul className="mt-1.5 space-y-0.5">
+                      {g.messages.map((m, i) => (
+                        <li key={i} className="text-xs text-muted-foreground">
+                          • {m}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

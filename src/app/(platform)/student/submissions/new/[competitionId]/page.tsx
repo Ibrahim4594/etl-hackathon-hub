@@ -1,74 +1,72 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
+import { redirect, notFound } from "next/navigation";
+import Link from "next/link";
+import { db } from "@/lib/db";
+import { competitions, teams, teamMembers } from "@/lib/db/schema";
+import { eq, and } from "drizzle-orm";
+import { serverAuth } from "@/lib/auth/server-auth";
+import { resolveOnboardingUser } from "@/lib/auth/resolve-onboarding-user";
+import { autoAdvanceCompetitionStatus } from "@/lib/services/competition-status";
 import { PageHeader } from "@/components/shared/page-header";
 import { SubmissionForm } from "@/components/submissions/submission-form";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Lock, Clock, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { formatPkt } from "@/lib/utils/timezone";
 
-interface TeamData {
-  teamId: string;
-  teamName: string;
-  role: string;
-  competitionTitle: string;
-}
+export default async function NewSubmissionPage({
+  params,
+}: {
+  params: Promise<{ competitionId: string }>;
+}) {
+  const { competitionId } = await params;
+  const { userId: clerkId } = await serverAuth();
+  if (!clerkId) redirect("/sign-in");
 
-export default function NewSubmissionPage() {
-  const params = useParams<{ competitionId: string }>();
-  const router = useRouter();
-  const { user } = useUser();
-  const [team, setTeam] = useState<TeamData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const dbUser = await resolveOnboardingUser(clerkId);
+  if (!dbUser) redirect("/onboarding");
+  if (dbUser.role !== "student") redirect("/onboarding");
 
-  useEffect(() => {
-    async function fetchTeam() {
-      if (!user) return;
+  // Fetch competition + advance status if dates have passed
+  const [comp] = await db
+    .select({
+      id: competitions.id,
+      title: competitions.title,
+      slug: competitions.slug,
+      status: competitions.status,
+      submissionStart: competitions.submissionStart,
+      submissionEnd: competitions.submissionEnd,
+      judgingEnd: competitions.judgingEnd,
+    })
+    .from(competitions)
+    .where(eq(competitions.id, competitionId));
 
-      try {
-        // Fetch teams for the current user via the teams API
-        const res = await fetch(`/api/teams?competitionId=${params.competitionId}`);
-        if (!res.ok) {
-          setError("Failed to load team information");
-          return;
-        }
+  if (!comp) notFound();
 
-        const data = await res.json();
+  const liveStatus = await autoAdvanceCompetitionStatus({
+    id: comp.id,
+    status: comp.status,
+    submissionEnd: comp.submissionEnd,
+    judgingEnd: comp.judgingEnd,
+  });
+  comp.status = liveStatus as typeof comp.status;
 
-        if (!data.team) {
-          setError("You need to be part of a team to submit. Register for this competition first.");
-          return;
-        }
-
-        if (data.team.role !== "lead") {
-          setError("Only the team lead can create submissions.");
-          return;
-        }
-
-        setTeam(data.team);
-      } catch {
-        setError("Something went wrong loading your team.");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchTeam();
-  }, [user, params.competitionId, router]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+  // Find user's team for this competition
+  const [membership] = await db
+    .select({
+      teamId: teams.id,
+      teamName: teams.name,
+      role: teamMembers.role,
+    })
+    .from(teamMembers)
+    .innerJoin(teams, eq(teamMembers.teamId, teams.id))
+    .where(
+      and(
+        eq(teamMembers.userId, dbUser.id),
+        eq(teams.competitionId, competitionId)
+      )
     );
-  }
 
-  if (error || !team) {
+  if (!membership) {
     return (
       <div className="space-y-8">
         <PageHeader title="New Submission" />
@@ -76,9 +74,73 @@ export default function NewSubmissionPage() {
           <CardContent className="flex flex-col items-center gap-4 py-12">
             <AlertCircle className="h-10 w-10 text-muted-foreground" />
             <p className="text-muted-foreground text-center max-w-md">
-              {error ?? "Unable to load team information."}
+              You need to register and join a team for this competition first.
             </p>
-            <Link href="/competitions"><Button variant="outline">Browse Competitions</Button></Link>
+            <Link href={`/competitions/${comp.slug}`}>
+              <Button>Go to Competition</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (membership.role !== "lead") {
+    return (
+      <div className="space-y-8">
+        <PageHeader title="New Submission" />
+        <Card>
+          <CardContent className="flex flex-col items-center gap-4 py-12">
+            <AlertCircle className="h-10 w-10 text-muted-foreground" />
+            <p className="text-muted-foreground text-center max-w-md">
+              Only the team lead can create submissions for &ldquo;{membership.teamName}&rdquo;.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Submission window gate — block UI before submissionStart and after submissionEnd
+  const now = new Date();
+  const subStart = comp.submissionStart ? new Date(comp.submissionStart) : null;
+  const subEnd = comp.submissionEnd ? new Date(comp.submissionEnd) : null;
+
+  if (subStart && now < subStart) {
+    return (
+      <div className="space-y-8">
+        <PageHeader title="New Submission" description={comp.title} />
+        <Card className="border-amber-500/30 bg-amber-500/5">
+          <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
+            <Lock className="h-10 w-10 text-amber-500" />
+            <h2 className="text-lg font-semibold">Submission window not open yet</h2>
+            <p className="max-w-md text-sm text-muted-foreground">
+              Submissions open on {formatPkt(subStart, { dateStyle: "long", timeStyle: "short" })} (PKT).
+              You can submit your project then.
+            </p>
+            <Link href={`/competitions/${comp.slug}`}>
+              <Button variant="outline">Back to Competition</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (subEnd && now > subEnd) {
+    return (
+      <div className="space-y-8">
+        <PageHeader title="New Submission" description={comp.title} />
+        <Card className="border-zinc-500/30 bg-zinc-500/5">
+          <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
+            <Clock className="h-10 w-10 text-zinc-400" />
+            <h2 className="text-lg font-semibold">Submission deadline has passed</h2>
+            <p className="max-w-md text-sm text-muted-foreground">
+              Submissions closed on {formatPkt(subEnd, { dateStyle: "long", timeStyle: "short" })} (PKT).
+            </p>
+            <Link href={`/competitions/${comp.slug}`}>
+              <Button variant="outline">Back to Competition</Button>
+            </Link>
           </CardContent>
         </Card>
       </div>
@@ -89,13 +151,9 @@ export default function NewSubmissionPage() {
     <div className="space-y-8">
       <PageHeader
         title="New Submission"
-        description={`Submitting as "${team.teamName}" for ${team.competitionTitle}`}
+        description={`Submitting as "${membership.teamName}" for ${comp.title}`}
       />
-
-      <SubmissionForm
-        competitionId={params.competitionId}
-        teamId={team.teamId}
-      />
+      <SubmissionForm competitionId={competitionId} teamId={membership.teamId} />
     </div>
   );
 }

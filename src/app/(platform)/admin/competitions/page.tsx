@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { db } from "@/lib/db";
 import { competitions, organizations, competitionSponsors } from "@/lib/db/schema";
-import { eq, desc, inArray, count } from "drizzle-orm";
+import { eq, desc, inArray, count, and, or, sql } from "drizzle-orm";
 import { resolveOnboardingUser } from "@/lib/auth/resolve-onboarding-user";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -72,7 +72,20 @@ export default async function AdminCompetitionsPage({ searchParams }: PageProps)
   const currentPage = Math.max(1, parseInt(pageParam || "1", 10));
   const offset = (currentPage - 1) * PAGE_SIZE;
 
-  const statusWhere = activeFilter !== "all" ? eq(competitions.status, activeFilter as "draft" | "pending_review" | "approved" | "active" | "judging" | "completed" | "cancelled") : undefined;
+  // Live filter excludes comps whose submission deadline has already passed
+  // (auto-advance fires on competition page load — list view filters by date too).
+  const statusWhere =
+    activeFilter === "active"
+      ? and(
+          eq(competitions.status, "active"),
+          or(
+            sql`${competitions.submissionEnd} IS NULL`,
+            sql`${competitions.submissionEnd} > NOW()`
+          )
+        )
+      : activeFilter !== "all"
+        ? eq(competitions.status, activeFilter as "draft" | "pending_review" | "approved" | "active" | "judging" | "completed" | "cancelled")
+        : undefined;
 
   const [totalRows, statusCounts, pageCompetitions] = await Promise.all([
     db.select({ total: count() }).from(competitions).where(statusWhere),

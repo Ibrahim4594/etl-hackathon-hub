@@ -28,7 +28,6 @@ import {
   Zap,
   Star,
   Award,
-  User,
 } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { DeadlineCountdown } from "@/components/student/deadline-countdown";
@@ -399,12 +398,7 @@ export default async function StudentDashboardPage() {
               <Zap className="h-6 w-6 text-primary" />
             </div>
             <p className="text-sm font-medium text-foreground mb-1">No active competitions right now</p>
-            <p className="text-xs text-muted-foreground mb-4">Check back soon — new hackathons are added regularly.</p>
-            <Link href="/competitions">
-              <Button size="sm" variant="outline" className="rounded-full gap-1.5">
-                Browse Competitions <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
-            </Link>
+            <p className="text-xs text-muted-foreground">Check back soon — new hackathons are added regularly.</p>
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -456,11 +450,7 @@ export default async function StudentDashboardPage() {
                   icon={Trophy}
                   title="No active competitions"
                   description="Browse the marketplace to find hackathons that match your skills."
-                >
-                  <Link href="/competitions">
-                    <Button size="sm">Browse Competitions</Button>
-                  </Link>
-                </EmptyState>
+                />
               ) : (
                 <div className="space-y-3">
                   {activeCompetitions.slice(0, 4).map((m) => {
@@ -775,28 +765,6 @@ export default async function StudentDashboardPage() {
             </CardContent>
           </Card>
         </div>
-      </div>
-
-      {/* ── QUICK ACTIONS ── */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {[
-          { href: "/competitions", label: "Browse Competitions", icon: Trophy },
-          { href: "/student/submissions", label: "My Submissions", icon: FileText },
-          { href: "/student/teams", label: "My Teams", icon: Users },
-          { href: "/student/profile", label: "Edit Profile", icon: User },
-        ].map(({ href, label, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className="group flex items-center gap-3 rounded-xl border border-border/50 bg-card p-4 transition-all hover:border-primary/20 hover:shadow-md"
-          >
-            <Icon className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
-            <span className="text-sm font-medium transition-colors group-hover:text-primary">
-              {label}
-            </span>
-            <ArrowRight className="ml-auto h-3.5 w-3.5 text-muted-foreground/50 transition-colors group-hover:text-primary" />
-          </Link>
-        ))}
       </div>
 
       {/* ── PAST COMPETITIONS ── */}

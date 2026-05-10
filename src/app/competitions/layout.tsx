@@ -9,15 +9,19 @@ import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { ModeToggle } from "@/components/shared/mode-toggle";
 import { MobileNav } from "@/components/marketing/mobile-nav";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarNav } from "@/components/layout/sidebar-nav";
+import { Topbar } from "@/components/layout/topbar";
+import { PlatformFab } from "@/components/layout/platform-fab";
 
-async function Navbar() {
-  const { userId } = await serverAuth();
-  let userRole: string | undefined;
-  if (userId) {
-    const [u] = await db.select({ role: users.role }).from(users).where(eq(users.clerkId, userId));
-    userRole = u?.role ?? undefined;
-  }
-  const dashboardSegment = userRole === "sponsor" ? "organizer" : userRole;
+async function MarketingNavbar({
+  userId,
+  role,
+}: {
+  userId: string | null;
+  role: string | undefined;
+}) {
+  const dashboardSegment = role === "sponsor" ? "organizer" : role;
   const dashboardHref = dashboardSegment ? `/${dashboardSegment}/dashboard` : "/onboarding";
 
   return (
@@ -42,13 +46,13 @@ async function Navbar() {
           </div>
 
           <div className="hidden lg:flex items-center gap-6">
-            <Link href="/competitions" className="text-foreground dark:text-foreground hover:text-primary dark:hover:text-primary-hover transition-colors font-medium">
+            <Link href="/competitions" className="text-foreground hover:text-primary transition-colors font-medium">
               Competitions
             </Link>
-            <Link href="/#features" className="text-foreground dark:text-foreground hover:text-primary dark:hover:text-primary-hover transition-colors font-medium">
+            <Link href="/#features" className="text-foreground hover:text-primary transition-colors font-medium">
               Features
             </Link>
-            <Link href="/#sponsors" className="text-foreground dark:text-foreground hover:text-primary dark:hover:text-primary-hover transition-colors font-medium">
+            <Link href="/#sponsors" className="text-foreground hover:text-primary transition-colors font-medium">
               For Organizers
             </Link>
           </div>
@@ -61,14 +65,14 @@ async function Navbar() {
             {!userId ? (
               <>
                 <SignInButton mode="redirect">
-                  <button className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
+                  <button className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium border border-input bg-background shadow-sm hover:bg-accent h-9 px-4 py-2">
                     <span className="hidden sm:inline">Sign In</span>
                     <LogIn className="w-4 h-4" />
                   </button>
                 </SignInButton>
                 <div className="hidden sm:block">
                   <SignUpButton mode="redirect">
-                    <button className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors h-9 px-4 py-2 bg-gradient-to-r from-primary to-accent hover:from-primary-hover hover:to-accent-hover text-primary-foreground shadow-lg">
+                    <button className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium h-9 px-4 py-2 bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-lg">
                       Join SPARK
                       <Sparkles className="ml-2 w-4 h-4" />
                     </button>
@@ -79,7 +83,7 @@ async function Navbar() {
               <>
                 <Link href={dashboardHref}>
                   <Button variant="ghost" className="h-9 px-4 py-2 text-sm font-medium">
-                    {userRole ? "Dashboard" : "Complete Profile"}
+                    {role ? "Dashboard" : "Complete Profile"}
                   </Button>
                 </Link>
                 <UserButton />
@@ -92,14 +96,44 @@ async function Navbar() {
   );
 }
 
-export default function CompetitionsLayout({
+export default async function CompetitionsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { userId } = await serverAuth();
+  let role: string | undefined;
+  let dbUserId: string | undefined;
+
+  if (userId) {
+    const [u] = await db
+      .select({ id: users.id, role: users.role })
+      .from(users)
+      .where(eq(users.clerkId, userId));
+    role = u?.role ?? undefined;
+    dbUserId = u?.id;
+  }
+
+  // Authenticated user with role → wrap in platform shell so sidebar/topbar
+  // match other pages. Public visitors see marketing-style top nav.
+  if (userId && role) {
+    return (
+      <SidebarProvider>
+        <div className="flex min-h-screen w-full">
+          <SidebarNav />
+          <div className="flex flex-1 flex-col">
+            <Topbar userId={dbUserId} />
+            <main className="flex-1 p-6">{children}</main>
+          </div>
+        </div>
+        <PlatformFab />
+      </SidebarProvider>
+    );
+  }
+
   return (
     <div className="flex min-h-screen flex-col">
-      <Navbar />
+      <MarketingNavbar userId={userId} role={role} />
       <main className="flex-1 pt-24">{children}</main>
     </div>
   );

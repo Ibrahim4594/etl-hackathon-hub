@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
@@ -31,26 +32,46 @@ function Breadcrumbs() {
 
   if (segments.length === 0) return null;
 
-  const crumbs = segments.map(formatSegment);
+  // Build cumulative paths so each crumb links to its parent route.
+  const crumbs = segments.map((seg, i) => ({
+    label: formatSegment(seg),
+    href: "/" + segments.slice(0, i + 1).join("/"),
+    isUuid: UUID_RE.test(seg),
+  }));
 
   return (
     <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm">
-      {crumbs.map((crumb, i) => (
-        <span key={i} className="flex items-center gap-1">
-          {i > 0 && (
-            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" />
-          )}
-          <span
-            className={
-              i === crumbs.length - 1
-                ? "font-medium text-foreground"
-                : "text-muted-foreground"
-            }
-          >
-            {crumb}
+      {crumbs.map((crumb, i) => {
+        const isLast = i === crumbs.length - 1;
+        // Last crumb is non-clickable (current page).
+        // UUID segments are not navigable on their own.
+        const clickable = !isLast && !crumb.isUuid;
+        return (
+          <span key={i} className="flex items-center gap-1">
+            {i > 0 && (
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" />
+            )}
+            {clickable ? (
+              <Link
+                href={crumb.href}
+                className="text-muted-foreground transition-colors hover:text-primary hover:underline"
+              >
+                {crumb.label}
+              </Link>
+            ) : (
+              <span
+                className={
+                  isLast
+                    ? "font-medium text-foreground"
+                    : "text-muted-foreground"
+                }
+              >
+                {crumb.label}
+              </span>
+            )}
           </span>
-        </span>
-      ))}
+        );
+      })}
     </nav>
   );
 }

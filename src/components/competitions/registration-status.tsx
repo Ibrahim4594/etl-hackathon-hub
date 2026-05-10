@@ -122,7 +122,16 @@ export function RegistrationStatus({
       const data = await res.json();
       if (!res.ok) {
         if (res.status === 409) {
+          // Server says already registered — UI was stale. Hide the Register
+          // button immediately and refetch real state from server.
           toast.info("You're already registered!");
+          setRegData((prev) => prev ?? {
+            teamId: "stale",
+            teamName: "Your Team",
+            role: "lead",
+            inviteCode: "—",
+            memberCount: 1,
+          });
           router.refresh();
           return;
         }
@@ -137,6 +146,8 @@ export function RegistrationStatus({
         memberCount: 1,
       });
       toast.success(`Registered! Your invite code: ${data.team.inviteCode}`);
+      // Re-fetch server state so submission CTAs and team data sync.
+      router.refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Registration failed");
     } finally {

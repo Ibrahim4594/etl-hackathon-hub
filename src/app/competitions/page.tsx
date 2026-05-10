@@ -28,19 +28,37 @@ export default async function CompetitionsMarketplace({
   const limit = 12;
   const offset = (page - 1) * limit;
 
-  // Build conditions — default to public-visible statuses
+  // Build conditions — default to public-visible statuses.
+  // "active" filter excludes comps whose submission deadline has passed
+  // (those are de-facto ended even if status column is still "active").
   type HackathonStatus = "pending_review" | "approved" | "active" | "judging" | "completed" | "cancelled";
   const validStatuses: HackathonStatus[] = ["active", "judging", "completed"];
+  const activeAndOpen = and(
+    eq(competitions.status, "active"),
+    or(
+      sql`${competitions.submissionEnd} IS NULL`,
+      sql`${competitions.submissionEnd} > NOW()`
+    )
+  )!;
   const statusFilter =
     params.status === "ended"
-      ? or(eq(competitions.status, "judging"), eq(competitions.status, "completed"))
-      : params.status && params.status !== "all" && validStatuses.includes(params.status as HackathonStatus)
-        ? eq(competitions.status, params.status as HackathonStatus)
-        : or(
+      ? or(
+          eq(competitions.status, "judging"),
+          eq(competitions.status, "completed"),
+          and(
             eq(competitions.status, "active"),
-            eq(competitions.status, "judging"),
-            eq(competitions.status, "completed")
-          );
+            sql`${competitions.submissionEnd} <= NOW()`
+          )
+        )
+      : params.status === "active"
+        ? activeAndOpen
+        : params.status && params.status !== "all" && validStatuses.includes(params.status as HackathonStatus)
+          ? eq(competitions.status, params.status as HackathonStatus)
+          : or(
+              activeAndOpen,
+              eq(competitions.status, "judging"),
+              eq(competitions.status, "completed")
+            );
 
   const conditions = [statusFilter!];
 

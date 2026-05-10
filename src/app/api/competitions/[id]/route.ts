@@ -271,9 +271,12 @@ export async function PATCH(
     return NextResponse.json({ competition: updated });
   }
 
-  if (competition.status !== "pending_review" && competition.status !== "draft" && competition.status !== "cancelled") {
+  // Allow editing in pending_review, draft, cancelled, AND active (live).
+  // Block once judging has started or competition is completed.
+  const editableStatuses = ["pending_review", "draft", "cancelled", "active"];
+  if (!editableStatuses.includes(competition.status)) {
     return NextResponse.json(
-      { error: "Only pending review or rejected competitions can be fully edited. To change deadlines on a live competition, use the Extend Deadlines action." },
+      { error: "Cannot edit a competition that is in judging or completed phase." },
       { status: 400 }
     );
   }

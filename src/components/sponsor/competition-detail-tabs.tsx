@@ -180,7 +180,13 @@ export function CompetitionDetailTabs({
 }: Props) {
   const c = competition;
   const cfg = COMPETITION_STATUS_CONFIG[c.status] ?? COMPETITION_STATUS_CONFIG.pending_review;
-  const isEditable = c.status === "pending_review" || c.status === "draft" || c.status === "cancelled";
+  // Editable in pending/draft/cancelled, also live (active) so organizer
+  // can fix typos without unpublishing.
+  const isEditable =
+    c.status === "pending_review" ||
+    c.status === "draft" ||
+    c.status === "cancelled" ||
+    c.status === "active";
   const isLive = c.status === "active";
   const totalSubs = submissions.length;
 

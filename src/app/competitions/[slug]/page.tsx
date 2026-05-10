@@ -106,11 +106,33 @@ export default async function CompetitionDetailPage({ params }: Props) {
   const tags = (comp.tags as string[]) || [];
   const targetParticipants = (comp.targetParticipants as string[]) || [];
 
-  const statusCfg = STATUS_CONFIG[comp.status] ?? STATUS_CONFIG.active;
-
-  const isOpen =
+  // Derived states from current time + dates
+  const now = new Date();
+  const subStart = comp.submissionStart ? new Date(comp.submissionStart) : null;
+  const subEnd = comp.submissionEnd ? new Date(comp.submissionEnd) : null;
+  const submissionsOpen =
     comp.status === "active" &&
-    (!comp.submissionEnd || new Date(comp.submissionEnd) > new Date());
+    (!subStart || subStart <= now) &&
+    (!subEnd || subEnd > now);
+  const submissionsEnded = !!(subEnd && subEnd < now);
+  const isJudgingOrDone = comp.status === "judging" || comp.status === "completed";
+  // Challenge/requirements/resources are revealed only when submission window opens.
+  // Hides spec-leak before window.
+  const detailsUnlocked = submissionsOpen || isJudgingOrDone;
+
+  // Effective badge: ended-but-still-active → "Submissions Closed"
+  const statusCfg = (() => {
+    const base = STATUS_CONFIG[comp.status] ?? STATUS_CONFIG.active;
+    if (comp.status === "active" && submissionsEnded) {
+      return { label: "Submissions Closed", className: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20" };
+    }
+    if (comp.status === "active" && subStart && subStart > now) {
+      return { label: "Registration Open", className: "bg-blue-500/10 text-blue-400 border-blue-500/20" };
+    }
+    return base;
+  })();
+
+  const isOpen = submissionsOpen;
 
   // Get participant count
   const [participantStats] = await db
@@ -248,22 +270,15 @@ export default async function CompetitionDetailPage({ params }: Props) {
 
   return (
     <div className="min-h-screen">
-      {/* ── Top Nav Bar ── */}
-      <nav className="sticky top-24 z-40 border-b border-border bg-background/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
-            <Link href="/competitions">
-              <Button variant="ghost" size="sm" className="gap-1.5">
-                <ArrowLeft className="h-4 w-4" />
-                Back to Competitions
-              </Button>
-            </Link>
-          </div>
-          <Link href="/" className="text-sm font-bold text-primary">
-            SPARK
-          </Link>
-        </div>
-      </nav>
+      {/* Inline back link (sidebar/topbar handles main nav) */}
+      <div className="mx-auto max-w-5xl px-4 pt-4 sm:px-6 lg:px-8">
+        <Link href="/competitions">
+          <Button variant="ghost" size="sm" className="gap-1.5 -ml-2">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Competitions
+          </Button>
+        </Link>
+      </div>
 
       {/* ── Visible Cover Banner (always shown — uploaded image or category gradient fallback) ── */}
       <div className="relative h-48 w-full overflow-hidden sm:h-64 md:h-80">
@@ -554,8 +569,8 @@ export default async function CompetitionDetailPage({ params }: Props) {
               </p>
             </section>
 
-            {/* Challenge */}
-            {comp.challengeStatement && (
+            {/* Challenge — hidden until submission window opens */}
+            {comp.challengeStatement && detailsUnlocked && (
               <section>
                 <h2 className="flex items-center gap-2 text-xl font-semibold">
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500/20 to-amber-500/5">
@@ -566,6 +581,19 @@ export default async function CompetitionDetailPage({ params }: Props) {
                 <p className="mt-3 whitespace-pre-wrap leading-relaxed text-muted-foreground">
                   {comp.challengeStatement}
                 </p>
+              </section>
+            )}
+            {comp.challengeStatement && !detailsUnlocked && (
+              <section className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-5">
+                <div className="flex items-start gap-3">
+                  <Lock className="mt-0.5 h-5 w-5 text-amber-500" />
+                  <div>
+                    <h3 className="font-semibold text-amber-500">Challenge unlocks when submission window opens</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {subStart ? `Available from ${subStart.toLocaleDateString("en-PK", { dateStyle: "medium" })} at ${subStart.toLocaleTimeString("en-PK", { timeStyle: "short" })}` : "Available once organizer opens the window."}
+                    </p>
+                  </div>
+                </div>
               </section>
             )}
 
@@ -808,8 +836,8 @@ export default async function CompetitionDetailPage({ params }: Props) {
               </section>
             )}
 
-            {/* Requirements */}
-            {comp.requirements && (
+            {/* Requirements — hidden until submission window opens */}
+            {comp.requirements && detailsUnlocked && (
               <section>
                 <h2 className="flex items-center gap-2 text-xl font-semibold">
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500/20 to-blue-500/5">
@@ -823,8 +851,8 @@ export default async function CompetitionDetailPage({ params }: Props) {
               </section>
             )}
 
-            {/* Resources */}
-            {resources.length > 0 && (
+            {/* Resources — hidden until submission window opens */}
+            {resources.length > 0 && detailsUnlocked && (
               <section>
                 <h2 className="flex items-center gap-2 text-xl font-semibold">
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500/20 to-purple-500/5">
