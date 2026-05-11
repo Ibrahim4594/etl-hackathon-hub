@@ -99,10 +99,10 @@ export function RegistrationStatus({
   const regStart = registrationStart ? new Date(registrationStart) : null;
   const regClosed = registrationEnd && new Date(registrationEnd) < now;
   const subClosed = submissionEnd && new Date(submissionEnd) < now;
-  const blockedStatuses = ["draft", "pending_review", "completed", "cancelled"];
-  const isStatusOpen = !blockedStatuses.includes(competitionStatus);
-  const isWindowOpen = !regStart || now >= regStart;
-  const canRegister = isStatusOpen && isWindowOpen;
+  const isActive = competitionStatus === "active";
+  // Approved competitions can accept registrations once the reg window has opened
+  const isApprovedAndOpen = competitionStatus === "approved" && (!regStart || now >= regStart);
+  const canRegister = isActive || isApprovedAndOpen;
   const isJudging = competitionStatus === "judging";
   const isCompleted = competitionStatus === "completed";
 
